@@ -51,6 +51,9 @@
 :root {
   --font-sans:
     "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-geist: var(--font-sans);
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 
   /* Color palette: #0A0A0A, #262626, #E5E5E5, #A1A1A1, #0083FF, #404040, #687282 */
   /* Pages: light gray background, dark text */
@@ -98,6 +101,15 @@
   --sidebar-accent-foreground: #e5e5e5;
   --sidebar-border: #404040;
   --sidebar-ring: #0083ff;
+}
+
+.typeset-docs {
+  --typeset-font-body: var(--font-geist);
+  --typeset-font-heading: var(--font-geist);
+  --typeset-font-mono: var(--font-geist-mono);
+  --typeset-size: 15px;
+  --typeset-leading: 1.75;
+  --typeset-flow: 1.25em;
 }
 
 .dark {
