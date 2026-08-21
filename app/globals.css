@@ -55,51 +55,51 @@
   --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
-  /* Color palette: #0A0A0A, #262626, #E5E5E5, #A1A1A1, #0083FF, #404040, #687282 */
-  /* Pages: light gray background, dark text */
-  /* Sidebar/Containers: dark background, light text */
+  /* Brand accent stays constant across themes */
+  /* --primary: #0083FF */
 
-  --background: #e5e5e5;
+  /* ---------------- Light mode (ref: shadcnblocks admin kit) ---------------- */
+  --background: #ffffff;
   --foreground: #0a0a0a;
 
-  --card: #262626;
-  --card-foreground: #e5e5e5;
-  --popover: #262626;
-  --popover-foreground: #e5e5e5;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
 
   --primary: #0083ff;
-  --primary-foreground: #e5e5e5;
+  --primary-foreground: #ffffff;
 
-  --secondary: #404040;
-  --secondary-foreground: #e5e5e5;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #0a0a0a;
 
-  --muted: #a1a1a1;
-  --muted-foreground: #687282;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
 
-  --accent: #0083ff;
-  --accent-foreground: #e5e5e5;
+  --accent: #f4f4f5;
+  --accent-foreground: #0a0a0a;
 
-  --destructive: #0083ff;
+  --destructive: #e7000b;
 
-  --border: #a1a1a1;
-  --input: #a1a1a1;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
   --ring: #0083ff;
 
   --chart-1: #0083ff;
-  --chart-2: #262626;
-  --chart-3: #404040;
-  --chart-4: #687282;
-  --chart-5: #a1a1a1;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #a855f7;
+  --chart-5: #71717a;
 
   --radius: 0.5rem;
 
-  --sidebar: #262626;
-  --sidebar-foreground: #e5e5e5;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a0a0a;
   --sidebar-primary: #0083ff;
-  --sidebar-primary-foreground: #e5e5e5;
-  --sidebar-accent: #404040;
-  --sidebar-accent-foreground: #e5e5e5;
-  --sidebar-border: #404040;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e5e5e5;
   --sidebar-ring: #0083ff;
 }
 
@@ -112,38 +112,47 @@
   --typeset-flow: 1.25em;
 }
 
+/* ---------------- Dark mode (ref: shadcn/ui dashboard block) ---------------- */
 .dark {
-  --background: #e5e5e5;
-  --foreground: #0a0a0a;
-  --card: #262626;
-  --card-foreground: #e5e5e5;
-  --popover: #262626;
-  --popover-foreground: #e5e5e5;
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #171717;
+  --popover-foreground: #fafafa;
+
   --primary: #0083ff;
-  --primary-foreground: #e5e5e5;
-  --secondary: #404040;
-  --secondary-foreground: #e5e5e5;
-  --muted: #a1a1a1;
-  --muted-foreground: #687282;
-  --accent: #0083ff;
-  --accent-foreground: #e5e5e5;
-  --destructive: #0083ff;
-  --border: #a1a1a1;
-  --input: #a1a1a1;
+  --primary-foreground: #ffffff;
+
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+
+  --muted: #262626;
+  --muted-foreground: #a1a1a1;
+
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+
+  --destructive: #ff6467;
+
+  --border: #262626;
+  --input: #262626;
   --ring: #0083ff;
+
   --chart-1: #0083ff;
-  --chart-2: #262626;
-  --chart-3: #404040;
-  --chart-4: #687282;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #c084fc;
   --chart-5: #a1a1a1;
 
-  --sidebar: #262626;
-  --sidebar-foreground: #e5e5e5;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #fafafa;
   --sidebar-primary: #0083ff;
-  --sidebar-primary-foreground: #e5e5e5;
-  --sidebar-accent: #404040;
-  --sidebar-accent-foreground: #e5e5e5;
-  --sidebar-border: #404040;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #171717;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #262626;
   --sidebar-ring: #0083ff;
 }
 
@@ -152,7 +161,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
   }
   html {
     @apply font-sans;
