@@ -1,8 +1,8 @@
-// components/ui/app-sidebar.tsx
+// components/ui/app-sidebar.tsx (full file — updated)
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   LayoutDashboard,
@@ -23,7 +23,7 @@ import {
   Bell,
   LogOut,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -45,7 +45,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { logout, useAccounts, useSession } from "@/lib/auth-store";
 
 type SubItem = { title: string; url: string };
 type NavItem = {
@@ -99,6 +101,7 @@ export const platformNav: NavItem[] = [
     items: [
       { title: "Staff", url: "/staff" },
       { title: "Admin", url: "/admin" },
+      { title: "Approvals", url: "/approvals" },
     ],
   },
 ];
@@ -139,6 +142,11 @@ export function getBreadcrumb(pathname: string): {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const session = useSession();
+  const pendingCount = useAccounts().filter(
+    (a) => a.status === "pending",
+  ).length;
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = { Sales: true };
@@ -152,6 +160,11 @@ export function AppSidebar() {
 
   const toggle = (title: string) =>
     setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
+
+  function handleLogout() {
+    logout();
+    router.push("/login");
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -208,9 +221,20 @@ export function AppSidebar() {
                     <SidebarMenuButton onClick={() => toggle(item.title)}>
                       <item.icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
                       <span>{item.title}</span>
+                      {item.title === "Users" && pendingCount > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="ml-auto h-4.5 px-1.5 text-[10px]"
+                        >
+                          {pendingCount}
+                        </Badge>
+                      )}
                       <ChevronRight
                         className={cn(
-                          "ml-auto size-4 text-muted-foreground transition-transform duration-200 ease-out",
+                          "size-4 text-muted-foreground transition-transform duration-200 ease-out",
+                          item.title === "Users" && pendingCount > 0
+                            ? "ml-1"
+                            : "ml-auto",
                           isOpen && "rotate-90",
                         )}
                       />
@@ -230,7 +254,23 @@ export function AppSidebar() {
                               <SidebarMenuSubItem key={sub.title}>
                                 <SidebarMenuSubButton
                                   isActive={pathname === sub.url}
-                                  render={<a href={sub.url}>{sub.title}</a>}
+                                  render={
+                                    <a
+                                      href={sub.url}
+                                      className="flex items-center justify-between"
+                                    >
+                                      <span>{sub.title}</span>
+                                      {sub.title === "Approvals" &&
+                                        pendingCount > 0 && (
+                                          <Badge
+                                            variant="destructive"
+                                            className="h-4.5 px-1.5 text-[10px]"
+                                          >
+                                            {pendingCount}
+                                          </Badge>
+                                        )}
+                                    </a>
+                                  }
                                 />
                               </SidebarMenuSubItem>
                             ))}
@@ -281,12 +321,18 @@ export function AppSidebar() {
                 render={
                   <SidebarMenuButton size="lg" className="group/user">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                      AU
+                      {session ? (
+                        getInitials(session.name)
+                      ) : (
+                        <User className="size-4" />
+                      )}
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">Admin User</span>
+                      <span className="truncate font-semibold">
+                        {session?.name ?? "Guest"}
+                      </span>
                       <span className="truncate text-xs text-muted-foreground">
-                        admin@acab.com
+                        {session?.email ?? "Not signed in"}
                       </span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4 text-muted-foreground transition-transform duration-200 group-data-popup-open/user:rotate-180" />
@@ -299,58 +345,77 @@ export function AppSidebar() {
                 sideOffset={8}
                 className="w-64 gap-1 p-2"
               >
-                <div className="flex items-center gap-2 px-2 py-1.5">
-                  <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                    AU
+                {session ? (
+                  <>
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                        {getInitials(session.name)}
+                      </div>
+                      <div className="grid flex-1 text-left leading-tight">
+                        <span className="truncate text-sm font-semibold">
+                          {session.name}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {session.email}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Separator className="my-1.5" />
+
+                    <button
+                      type="button"
+                      className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Sparkles className="size-4 transition-transform duration-200 group-hover/item:scale-110 group-hover/item:-rotate-12" />
+                      Upgrade to Pro
+                    </button>
+
+                    <Separator className="my-1.5" />
+
+                    {(
+                      [
+                        { label: "Account", icon: User },
+                        { label: "Billing", icon: CreditCard },
+                        { label: "Notifications", icon: Bell },
+                      ] as const
+                    ).map(({ label, icon: Icon }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Icon className="size-4 transition-transform duration-200 group-hover/item:scale-110" />
+                        {label}
+                      </button>
+                    ))}
+
+                    <Separator className="my-1.5" />
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <LogOut className="size-4 transition-transform duration-200 group-hover/item:translate-x-0.5" />
+                      Log out
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-2 p-1">
+                    <p className="px-2 pt-1 text-sm text-muted-foreground">
+                      You&apos;re not signed in.
+                    </p>
+                    <SidebarMenuButton
+                      render={<a href="/login">Sign in</a>}
+                      className="justify-center bg-primary text-primary-foreground hover:bg-primary/80"
+                    />
+                    <SidebarMenuButton
+                      render={<a href="/register">Create account</a>}
+                      className="justify-center"
+                    />
                   </div>
-                  <div className="grid flex-1 text-left leading-tight">
-                    <span className="truncate text-sm font-semibold">
-                      Admin User
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      admin@acab.com
-                    </span>
-                  </div>
-                </div>
-
-                <Separator className="my-1.5" />
-
-                <button
-                  type="button"
-                  className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-                >
-                  <Sparkles className="size-4 transition-transform duration-200 group-hover/item:scale-110 group-hover/item:-rotate-12" />
-                  Upgrade to Pro
-                </button>
-
-                <Separator className="my-1.5" />
-
-                {(
-                  [
-                    { label: "Account", icon: User },
-                    { label: "Billing", icon: CreditCard },
-                    { label: "Notifications", icon: Bell },
-                  ] as const
-                ).map(({ label, icon: Icon }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <Icon className="size-4 transition-transform duration-200 group-hover/item:scale-110" />
-                    {label}
-                  </button>
-                ))}
-
-                <Separator className="my-1.5" />
-
-                <button
-                  type="button"
-                  className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-                >
-                  <LogOut className="size-4 transition-transform duration-200 group-hover/item:translate-x-0.5" />
-                  Log out
-                </button>
+                )}
               </PopoverContent>
             </Popover>
           </SidebarMenuItem>

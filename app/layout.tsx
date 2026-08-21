@@ -1,11 +1,8 @@
-// app/layout.tsx
+// app/layout.tsx (root — sidebar removed, kept minimal)
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/ui/app-sidebar";
-import { SiteHeader } from "@/components/ui/site-header";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 
 export const metadata: Metadata = {
@@ -41,15 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <ThemeProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <SiteHeader />
-              <main className="flex-1 p-4">{children}</main>
-            </SidebarInset>
-          </SidebarProvider>
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
