@@ -38,7 +38,7 @@ export default function LoginPage() {
       setSubmitting(false);
       return;
     }
-    router.push("/dashboard");
+    router.push(result.account.role === "staff" ? "/staff" : "/dashboard");
   }
 
   return (
