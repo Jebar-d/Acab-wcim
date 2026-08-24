@@ -1,4 +1,4 @@
-// components/site-header.tsx
+// components/ui/site-header.tsx (full file)
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -13,11 +13,16 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getBreadcrumb } from "@/components/ui/app-sidebar";
+import { adminBreadcrumbEntries } from "@/components/ui/app-sidebar";
+import { staffBreadcrumbEntries } from "@/app/(app)/staff-sidebar";
+import { resolveBreadcrumb } from "@/lib/nav";
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { group, label } = getBreadcrumb(pathname);
+  const entries = pathname.startsWith("/staff")
+    ? staffBreadcrumbEntries
+    : adminBreadcrumbEntries;
+  const { group, label } = resolveBreadcrumb(pathname, entries);
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4 transition-colors duration-300">

@@ -1,4 +1,4 @@
-// lib/auth-store.ts
+// lib/auth-store.ts (full file)
 "use client";
 
 import * as React from "react";
@@ -118,12 +118,29 @@ export type RegisterInput = {
   email: string;
   password: string;
   role: Role;
-  employeeId?: string;
 };
 
 export type RegisterResult =
   | { ok: true; account: Account }
   | { ok: false; error: string };
+
+/**
+ * Staff/admin IDs are issued by the system, never typed in by the
+ * registrant — letting people pick their own ID would make it meaningless
+ * as something an admin can verify against. Sequential per role, seeded
+ * from whatever's already in storage so it keeps counting up correctly
+ * even after a refresh.
+ */
+function generateEmployeeId(role: Role, existingAccounts: Account[]): string {
+  const prefix = role === "admin" ? "ADM" : "EMP";
+  const base = role === "admin" ? 1 : 1042;
+  const numbers = existingAccounts
+    .filter((a) => a.role === role && a.employeeId?.startsWith(`${prefix}-`))
+    .map((a) => parseInt(a.employeeId!.slice(prefix.length + 1), 10))
+    .filter((n) => !Number.isNaN(n));
+  const next = numbers.length > 0 ? Math.max(...numbers) + 1 : base;
+  return `${prefix}-${String(next).padStart(4, "0")}`;
+}
 
 export function registerAccount(input: RegisterInput): RegisterResult {
   const accounts = loadAccountsFromStorage();
@@ -135,16 +152,8 @@ export function registerAccount(input: RegisterInput): RegisterResult {
   if (accounts.some((a) => a.email.toLowerCase() === email)) {
     return { ok: false, error: "An account with this email already exists." };
   }
-  if (
-    (input.role === "staff" || input.role === "admin") &&
-    !input.employeeId?.trim()
-  ) {
-    return {
-      ok: false,
-      error:
-        "An ID number is required for staff/employee and admin registrations.",
-    };
-  }
+
+  const needsId = input.role === "staff" || input.role === "admin";
 
   const account: Account = {
     id:
@@ -155,9 +164,9 @@ export function registerAccount(input: RegisterInput): RegisterResult {
     email,
     password: input.password,
     role: input.role,
-    employeeId: input.employeeId?.trim() || undefined,
+    employeeId: needsId ? generateEmployeeId(input.role, accounts) : undefined,
     // Users are active right away; staff/admin need a verified admin to
-    // check their ID number first.
+    // check their generated ID first.
     status: input.role === "user" ? "active" : "pending",
     createdAt: new Date().toISOString(),
   };

@@ -1,8 +1,9 @@
-// app/(auth)/register/page.tsx
+// app/(auth)/register/page.tsx (full file)
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { CheckCircle2, UserPlus, Warehouse } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,17 +19,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RoleSelect } from "@/components/auth/role-select";
-import { registerAccount, type Role } from "@/lib/auth-store";
+import { registerAccount, type Account, type Role } from "@/lib/auth-store";
 
 export default function RegisterPage() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState<Role>("user");
-  const [employeeId, setEmployeeId] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
-  const [submittedRole, setSubmittedRole] = React.useState<Role | null>(null);
+  const [submittedAccount, setSubmittedAccount] =
+    React.useState<Account | null>(null);
 
   const needsId = role === "staff" || role === "admin";
 
@@ -37,24 +38,31 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError(null);
 
-    const result = registerAccount({
-      name,
-      email,
-      password,
-      role,
-      employeeId: needsId ? employeeId : undefined,
-    });
+    const result = registerAccount({ name, email, password, role });
 
     setSubmitting(false);
     if (!result.ok) {
       setError(result.error);
       return;
     }
-    setSubmittedRole(result.account.role);
+
+    setSubmittedAccount(result.account);
+
+    if (result.account.employeeId) {
+      toast.success(
+        `Your ${result.account.role} ID is ${result.account.employeeId}`,
+        {
+          description:
+            "Keep this — an admin will ask for it to verify your registration.",
+        },
+      );
+    } else {
+      toast.success("Account created — you can sign in now.");
+    }
   }
 
-  if (submittedRole) {
-    const isImmediate = submittedRole === "user";
+  if (submittedAccount) {
+    const isImmediate = submittedAccount.role === "user";
     return (
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
@@ -67,9 +75,24 @@ export default function RegisterPage() {
           <CardDescription>
             {isImmediate
               ? "You can sign in right away."
-              : "An existing admin will verify your ID number before you can sign in. You'll be able to log in once your account is approved."}
+              : "An existing admin will verify your ID before you can sign in."}
           </CardDescription>
         </CardHeader>
+
+        {submittedAccount.employeeId && (
+          <CardContent>
+            <div className="flex flex-col items-center gap-1 rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-3 text-center">
+              <span className="text-xs text-muted-foreground">
+                Your {submittedAccount.role === "admin" ? "admin" : "employee"}{" "}
+                ID
+              </span>
+              <span className="font-mono text-lg font-semibold tracking-wide">
+                {submittedAccount.employeeId}
+              </span>
+            </div>
+          </CardContent>
+        )}
+
         <CardFooter className="justify-center pt-0">
           <Button render={<Link href="/login">Go to sign in</Link>} />
         </CardFooter>
@@ -103,9 +126,10 @@ export default function RegisterPage() {
           {needsId && (
             <Alert>
               <AlertDescription>
-                Staff/employee and admin registrations are held for review. An
-                existing admin verifies your ID number before your account is
-                activated.
+                We&apos;ll generate your{" "}
+                {role === "admin" ? "admin" : "employee"} ID automatically once
+                you register. An existing admin verifies it before your account
+                is activated.
               </AlertDescription>
             </Alert>
           )}
@@ -134,21 +158,6 @@ export default function RegisterPage() {
               autoComplete="email"
             />
           </div>
-
-          {needsId && (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="employeeId">
-                {role === "admin" ? "Admin ID number" : "Employee ID number"}
-              </Label>
-              <Input
-                id="employeeId"
-                required
-                value={employeeId}
-                onChange={(event) => setEmployeeId(event.target.value)}
-                placeholder={role === "admin" ? "ADM-0000" : "EMP-0000"}
-              />
-            </div>
-          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password">Password</Label>

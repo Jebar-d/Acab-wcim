@@ -1,29 +1,21 @@
-// components/ui/app-sidebar.tsx (full file — updated)
+// components/ui/app-sidebar.tsx — FULL FILE, replace everything
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
 import {
-  LayoutDashboard,
-  Package,
-  Warehouse,
-  Inbox,
-  ShoppingCart,
-  Users,
-  ChevronRight,
+  Building2,
   ChevronsUpDown,
-  MoreHorizontal,
-  AlertTriangle,
-  Clock,
-  Truck,
-  Sparkles,
+  LayoutDashboard,
+  Users,
   User,
   CreditCard,
   Bell,
   LogOut,
+  Warehouse,
 } from "lucide-react";
-import { cn, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
+import type { BreadcrumbEntry } from "@/lib/nav";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -35,9 +27,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
@@ -49,96 +38,22 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { logout, useAccounts, useSession } from "@/lib/auth-store";
 
-type SubItem = { title: string; url: string };
-type NavItem = {
-  title: string;
-  url?: string;
-  icon: React.ElementType;
-  items?: SubItem[];
-};
+// Admin's nav is intentionally small: the day-to-day operational screens
+// (Sales, Inventory, Warehouse, Procurement) live in the Staff portal at
+// /staff/*. This sidebar only covers what's actually an admin's job —
+// managing the supplier registry and managing user accounts/approvals.
+type NavItem = { title: string; url: string; icon: React.ElementType };
 
 export const platformNav: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  {
-    title: "Sales",
-    icon: ShoppingCart,
-    items: [
-      { title: "Clients", url: "/clients" },
-      { title: "Quotations", url: "/quotations" },
-      { title: "Orders", url: "/orders" },
-    ],
-  },
-  {
-    title: "Inventory",
-    icon: Package,
-    items: [
-      { title: "Materials", url: "/materials" },
-      { title: "Categories", url: "/categories" },
-      { title: "Checklist", url: "/checklist" },
-    ],
-  },
-  {
-    title: "Warehouse",
-    icon: Warehouse,
-    items: [
-      { title: "Stock In", url: "/stock-in" },
-      { title: "Stock Out", url: "/stock-out" },
-      { title: "Delivery Receipts", url: "/delivery-receipts" },
-    ],
-  },
-  {
-    title: "Procurement",
-    icon: Inbox,
-    items: [
-      { title: "Purchase Orders", url: "/purchase-orders" },
-      { title: "Suppliers", url: "/suppliers" },
-      { title: "Ledger", url: "/ledger" },
-    ],
-  },
-  {
-    title: "Users",
-    icon: Users,
-    items: [
-      { title: "Staff", url: "/staff" },
-      { title: "Admin", url: "/admin" },
-      { title: "Approvals", url: "/approvals" },
-    ],
-  },
+  { title: "Suppliers", url: "/suppliers", icon: Building2 },
+  { title: "Users", url: "/users", icon: Users },
 ];
 
-export const quickLinks = [
-  { title: "Low Stock Alerts", url: "/alerts", icon: AlertTriangle },
-  {
-    title: "Pending Orders",
-    url: "/purchase-orders?status=pending",
-    icon: Clock,
-  },
-  { title: "Recent Deliveries", url: "/delivery-receipts", icon: Truck },
-];
-
-/** Resolves a pathname to a breadcrumb group + label using the nav config above. */
-export function getBreadcrumb(pathname: string): {
-  group: string | null;
-  label: string;
-} {
-  for (const item of platformNav) {
-    if (item.url === pathname) return { group: null, label: item.title };
-    const sub = item.items?.find((s) => s.url === pathname);
-    if (sub) return { group: item.title, label: sub.title };
-  }
-
-  const quick = quickLinks.find((q) => q.url.split("?")[0] === pathname);
-  if (quick) return { group: "Quick Links", label: quick.title };
-
-  const segments = pathname.split("/").filter(Boolean);
-  const last = segments[segments.length - 1];
-  if (!last) return { group: null, label: "Dashboard" };
-
-  const label = last
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-  return { group: null, label };
-}
+/** Flat url->label map SiteHeader uses to resolve breadcrumbs on admin routes. */
+export const adminBreadcrumbEntries: BreadcrumbEntry[] = platformNav.map(
+  (item) => ({ url: item.url, label: item.title }),
+);
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -147,19 +62,6 @@ export function AppSidebar() {
   const pendingCount = useAccounts().filter(
     (a) => a.status === "pending",
   ).length;
-
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = { Sales: true };
-    for (const item of platformNav) {
-      if (item.items?.some((sub) => sub.url === pathname)) {
-        initial[item.title] = true;
-      }
-    }
-    return initial;
-  });
-
-  const toggle = (title: string) =>
-    setOpenGroups((prev) => ({ ...prev, [title]: !prev[title] }));
 
   function handleLogout() {
     logout();
@@ -179,7 +81,7 @@ export function AppSidebar() {
                     <Warehouse className="size-4" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">ACAB</span>
+                    <span className="truncate font-semibold">ACAB Admin</span>
                     <span className="truncate text-xs text-muted-foreground">
                       Warehouse Construction IMS
                     </span>
@@ -194,120 +96,30 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {platformNav.map((item) => {
-                if (!item.items) {
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        isActive={pathname === item.url}
-                        render={
-                          <a href={item.url}>
-                            <item.icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
-                            <span>{item.title}</span>
-                          </a>
-                        }
-                      />
-                    </SidebarMenuItem>
-                  );
-                }
-
-                const isOpen = openGroups[item.title] ?? false;
-
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton onClick={() => toggle(item.title)}>
-                      <item.icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
-                      <span>{item.title}</span>
-                      {item.title === "Users" && pendingCount > 0 && (
-                        <Badge
-                          variant="destructive"
-                          className="ml-auto h-4.5 px-1.5 text-[10px]"
-                        >
-                          {pendingCount}
-                        </Badge>
-                      )}
-                      <ChevronRight
-                        className={cn(
-                          "size-4 text-muted-foreground transition-transform duration-200 ease-out",
-                          item.title === "Users" && pendingCount > 0
-                            ? "ml-1"
-                            : "ml-auto",
-                          isOpen && "rotate-90",
-                        )}
-                      />
-                    </SidebarMenuButton>
-                    <AnimatePresence initial={false}>
-                      {isOpen && (
-                        <motion.div
-                          key="content"
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                          className="overflow-hidden"
-                        >
-                          <SidebarMenuSub>
-                            {item.items.map((sub) => (
-                              <SidebarMenuSubItem key={sub.title}>
-                                <SidebarMenuSubButton
-                                  isActive={pathname === sub.url}
-                                  render={
-                                    <a
-                                      href={sub.url}
-                                      className="flex items-center justify-between"
-                                    >
-                                      <span>{sub.title}</span>
-                                      {sub.title === "Approvals" &&
-                                        pendingCount > 0 && (
-                                          <Badge
-                                            variant="destructive"
-                                            className="h-4.5 px-1.5 text-[10px]"
-                                          >
-                                            {pendingCount}
-                                          </Badge>
-                                        )}
-                                    </a>
-                                  }
-                                />
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {quickLinks.map((link) => (
-                <SidebarMenuItem key={link.title}>
+              {platformNav.map((item) => (
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    isActive={pathname === link.url.split("?")[0]}
+                    isActive={pathname === item.url}
                     render={
-                      <a href={link.url}>
-                        <link.icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
-                        <span>{link.title}</span>
+                      <a href={item.url}>
+                        <item.icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
+                        <span>{item.title}</span>
+                        {item.title === "Users" && pendingCount > 0 && (
+                          <Badge
+                            variant="destructive"
+                            className="ml-auto h-4.5 px-1.5 text-[10px]"
+                          >
+                            {pendingCount}
+                          </Badge>
+                        )}
                       </a>
                     }
                   />
                 </SidebarMenuItem>
               ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton className="text-muted-foreground">
-                  <MoreHorizontal className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110" />
-                  <span>More</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -320,13 +132,15 @@ export function AppSidebar() {
               <PopoverTrigger
                 render={
                   <SidebarMenuButton size="lg" className="group/user">
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                      {session ? (
-                        getInitials(session.name)
-                      ) : (
-                        <User className="size-4" />
-                      )}
-                    </div>
+                    <Avatar className="size-8">
+                      <AvatarFallback className="rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        {session ? (
+                          getInitials(session.name)
+                        ) : (
+                          <User className="size-4" />
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
                         {session?.name ?? "Guest"}
@@ -340,17 +154,19 @@ export function AppSidebar() {
                 }
               />
               <PopoverContent
-                side="top"
-                align="start"
-                sideOffset={8}
+                side="right"
+                align="end"
+                sideOffset={12}
                 className="w-64 gap-1 p-2"
               >
                 {session ? (
                   <>
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                        {getInitials(session.name)}
-                      </div>
+                      <Avatar className="size-9 shrink-0">
+                        <AvatarFallback className="rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                          {getInitials(session.name)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="grid flex-1 text-left leading-tight">
                         <span className="truncate text-sm font-semibold">
                           {session.name}
@@ -363,19 +179,16 @@ export function AppSidebar() {
 
                     <Separator className="my-1.5" />
 
-                    <button
-                      type="button"
-                      className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+                    <a
+                      href="/profile"
+                      className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
-                      <Sparkles className="size-4 transition-transform duration-200 group-hover/item:scale-110 group-hover/item:-rotate-12" />
-                      Upgrade to Pro
-                    </button>
-
-                    <Separator className="my-1.5" />
+                      <User className="size-4 transition-transform duration-200 group-hover/item:scale-110" />
+                      Profile
+                    </a>
 
                     {(
                       [
-                        { label: "Account", icon: User },
                         { label: "Billing", icon: CreditCard },
                         { label: "Notifications", icon: Bell },
                       ] as const

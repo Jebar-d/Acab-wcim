@@ -1,8 +1,10 @@
+// app/staff/layout.tsx
 import type { ReactNode } from "react";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/ui/site-header";
 import { StaffSidebar } from "@/app/(app)/staff-sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return (
@@ -12,6 +14,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
         <SiteHeader />
         <main className="flex flex-1 flex-col gap-4 p-4">{children}</main>
       </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   );
 }
