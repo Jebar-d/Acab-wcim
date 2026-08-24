@@ -1,0 +1,9 @@
+/* hero-20 — ArchiFlow house-plans hero (from diip3sh/sections section-24) */
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=Lato:wght@400;700&display=swap");
+
+@theme {
+  --font-instrument-serif: "Instrument Serif", Georgia, serif;
+  --font-tight: "Inter Tight", Inter, ui-sans-serif, sans-serif;
+  --font-lato: Lato, ui-sans-serif, system-ui, sans-serif;
+}
