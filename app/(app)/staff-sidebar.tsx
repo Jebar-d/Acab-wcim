@@ -44,6 +44,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { logout, useSession } from "@/lib/auth-store";
+import { NotificationsMenu } from "@/components/ui/notifications-menu";
 
 type StaffSubItem = { title: string; url: string };
 type StaffNavItem = {
@@ -306,6 +307,10 @@ export function StaffSidebar() {
                       <User className="size-4" />
                       Profile
                     </Link>
+                    <div className="flex items-center gap-2.5 rounded-2xl px-2 py-1 text-sm font-medium">
+                      <NotificationsMenu role="staff" />
+                      <span>Notifications</span>
+                    </div>
                     <Separator className="my-1.5" />
                     <button
                       type="button"

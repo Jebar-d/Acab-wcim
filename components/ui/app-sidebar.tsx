@@ -2,16 +2,24 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Building2,
   ChevronsUpDown,
   LayoutDashboard,
   Users,
   User,
-  CreditCard,
-  Bell,
   LogOut,
   Warehouse,
+  AlertTriangle,
+  ChevronRight,
+  Clock,
+  Inbox,
+  Package,
+  ShoppingCart,
+  Truck,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { BreadcrumbEntry } from "@/lib/nav";
@@ -27,6 +35,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import {
@@ -37,12 +48,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { logout, useAccounts, useSession } from "@/lib/auth-store";
+import { NotificationsMenu } from "@/components/ui/notifications-menu";
 
 // Admin's nav is intentionally small: the day-to-day operational screens
 // (Sales, Inventory, Warehouse, Procurement) live in the Staff portal at
 // /staff/*. This sidebar only covers what's actually an admin's job —
 // managing the supplier registry and managing user accounts/approvals.
 type NavItem = { title: string; url: string; icon: React.ElementType };
+type GroupedNavItem = {
+  title: string;
+  icon: React.ElementType;
+  items: { title: string; url: string }[];
+};
 
 export const platformNav: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -50,10 +67,71 @@ export const platformNav: NavItem[] = [
   { title: "Users", url: "/users", icon: Users },
 ];
 
+export const operationsNav: GroupedNavItem[] = [
+  {
+    title: "Sales",
+    icon: ShoppingCart,
+    items: [
+      { title: "Clients", url: "/staff/clients" },
+      { title: "Quotations", url: "/staff/quotations" },
+      { title: "Orders", url: "/staff/orders" },
+    ],
+  },
+  {
+    title: "Inventory",
+    icon: Package,
+    items: [
+      { title: "Materials", url: "/staff/materials" },
+      { title: "Categories", url: "/staff/categories" },
+      { title: "Checklist", url: "/staff/checklist" },
+    ],
+  },
+  {
+    title: "Warehouse",
+    icon: Warehouse,
+    items: [
+      { title: "Stock In", url: "/staff/stock-in" },
+      { title: "Stock Out", url: "/staff/stock-out" },
+      { title: "Delivery Receipts", url: "/staff/delivery-receipts" },
+    ],
+  },
+  {
+    title: "Procurement",
+    icon: Inbox,
+    items: [
+      { title: "Purchase Orders", url: "/staff/purchase-orders" },
+      { title: "Suppliers", url: "/staff/suppliers" },
+      { title: "Ledger", url: "/staff/ledger" },
+    ],
+  },
+];
+
+export const quickLinks = [
+  { title: "Low Stock Alerts", url: "/staff/alerts", icon: AlertTriangle },
+  {
+    title: "Pending Orders",
+    url: "/staff/purchase-orders?status=pending",
+    icon: Clock,
+  },
+  { title: "Recent Deliveries", url: "/staff/delivery-receipts", icon: Truck },
+];
+
 /** Flat url->label map SiteHeader uses to resolve breadcrumbs on admin routes. */
-export const adminBreadcrumbEntries: BreadcrumbEntry[] = platformNav.map(
-  (item) => ({ url: item.url, label: item.title }),
-);
+export const adminBreadcrumbEntries: BreadcrumbEntry[] = [
+  ...platformNav.map((item) => ({ url: item.url, label: item.title })),
+  ...operationsNav.flatMap((item) =>
+    item.items.map((subItem) => ({
+      url: subItem.url,
+      label: subItem.title,
+      group: item.title,
+    })),
+  ),
+  ...quickLinks.map((item) => ({
+    url: item.url.split("?")[0],
+    label: item.title,
+    group: "Quick Links",
+  })),
+];
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -62,6 +140,9 @@ export function AppSidebar() {
   const pendingCount = useAccounts().filter(
     (a) => a.status === "pending",
   ).length;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    Sales: true,
+  });
 
   function handleLogout() {
     logout();
@@ -116,6 +197,82 @@ export function AppSidebar() {
                           </Badge>
                         )}
                       </a>
+                    }
+                  />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Operations</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {operationsNav.map((item) => {
+                const isOpen = openGroups[item.title] ?? false;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      onClick={() =>
+                        setOpenGroups((groups) => ({
+                          ...groups,
+                          [item.title]: !isOpen,
+                        }))
+                      }
+                    >
+                      <item.icon className="size-4" />
+                      <span>{item.title}</span>
+                      <ChevronRight
+                        className={`ml-auto size-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                      />
+                    </SidebarMenuButton>
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <SidebarMenuSub>
+                            {item.items.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.title}>
+                                <SidebarMenuSubButton
+                                  isActive={pathname === subItem.url}
+                                  render={
+                                    <Link href={subItem.url}>
+                                      {subItem.title}
+                                    </Link>
+                                  }
+                                />
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Quick Links</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {quickLinks.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    isActive={pathname === item.url.split("?")[0]}
+                    render={
+                      <Link href={item.url}>
+                        <item.icon className="size-4" />
+                        <span>{item.title}</span>
+                      </Link>
                     }
                   />
                 </SidebarMenuItem>
@@ -187,21 +344,10 @@ export function AppSidebar() {
                       Profile
                     </a>
 
-                    {(
-                      [
-                        { label: "Billing", icon: CreditCard },
-                        { label: "Notifications", icon: Bell },
-                      ] as const
-                    ).map(({ label, icon: Icon }) => (
-                      <button
-                        key={label}
-                        type="button"
-                        className="group/item flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <Icon className="size-4 transition-transform duration-200 group-hover/item:scale-110" />
-                        {label}
-                      </button>
-                    ))}
+                    <div className="flex items-center gap-2.5 rounded-2xl px-2 py-1 text-sm font-medium">
+                      <NotificationsMenu role="admin" />
+                      <span>Notifications</span>
+                    </div>
 
                     <Separator className="my-1.5" />
 

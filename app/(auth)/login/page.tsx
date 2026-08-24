@@ -38,7 +38,13 @@ export default function LoginPage() {
       setSubmitting(false);
       return;
     }
-    router.push(result.account.role === "staff" ? "/staff" : "/dashboard");
+    router.push(
+      result.account.role === "admin"
+        ? "/dashboard"
+        : result.account.role === "staff"
+          ? "/staff"
+          : "/",
+    );
   }
 
   return (

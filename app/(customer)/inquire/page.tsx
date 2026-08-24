@@ -1,0 +1,81 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { createInquiry } from "@/lib/inquiries-store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function InquirePage() {
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    const data = new FormData(event.currentTarget);
+    createInquiry({
+      project: String(data.get("project")),
+      materials: String(data.get("materials")),
+      quantity: String(data.get("quantity")),
+      timeline: String(data.get("timeline")),
+    });
+    setSubmitted(true);
+    setSaving(false);
+    toast.success("Quotation request received");
+  }
+  if (saving)
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-20">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="mt-8 h-64 w-full" />
+      </div>
+    );
+  return (
+    <div className="mx-auto max-w-2xl px-6 py-20">
+      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+        Order / quotation
+      </p>
+      <h1 className="mt-4 text-5xl font-semibold tracking-tight">
+        Tell us what you&apos;re building.
+      </h1>
+      {submitted ? (
+        <Alert className="mt-10">
+          <AlertDescription>
+            Your request is queued. Our team will contact you with a quotation.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <form
+          onSubmit={submit}
+          className="mt-10 flex flex-col gap-4 rounded-2xl border border-border p-6"
+        >
+          <div>
+            <Label htmlFor="project">Project details</Label>
+            <Input id="project" name="project" required className="mt-1.5" />
+          </div>
+          <div>
+            <Label htmlFor="materials">Materials needed</Label>
+            <Input
+              id="materials"
+              name="materials"
+              required
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="quantity">Quantity</Label>
+            <Input id="quantity" name="quantity" required className="mt-1.5" />
+          </div>
+          <div>
+            <Label htmlFor="timeline">Timeline</Label>
+            <Input id="timeline" name="timeline" required className="mt-1.5" />
+          </div>
+          <Button type="submit">Request quotation</Button>
+        </form>
+      )}
+    </div>
+  );
+}

@@ -12,13 +12,22 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import MinecraftThemeSwitch from "@/components/ui/mc-btn";
+import { useTheme } from "@/components/ui/theme-provider";
+import { NotificationsMenu } from "@/components/ui/notifications-menu";
+import { useSession } from "@/lib/auth-store";
 import { adminBreadcrumbEntries } from "@/components/ui/app-sidebar";
 import { staffBreadcrumbEntries } from "@/app/(app)/staff-sidebar";
 import { resolveBreadcrumb } from "@/lib/nav";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const session = useSession();
+  const { theme, setTheme } = useTheme();
+  const role =
+    session?.role === "staff" || pathname.startsWith("/staff")
+      ? "staff"
+      : "admin";
   const entries = pathname.startsWith("/staff")
     ? staffBreadcrumbEntries
     : adminBreadcrumbEntries;
@@ -46,7 +55,11 @@ export function SiteHeader() {
       </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-1">
-        <ThemeToggle />
+        <NotificationsMenu role={role} />
+        <MinecraftThemeSwitch
+          checked={theme === "dark"}
+          onCheckedChange={(value) => setTheme(value ? "dark" : "light")}
+        />
       </div>
     </header>
   );

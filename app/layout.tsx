@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import { UserCursorProvider } from "@/components/ui/user-cursor-provider";
 
 export const metadata: Metadata = {
   title: "ACAB | Warehouse Construction Inventory Management",
@@ -38,7 +39,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <UserCursorProvider />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
