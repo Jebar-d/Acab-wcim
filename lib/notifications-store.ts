@@ -129,16 +129,9 @@ export function useNotifications(audience: "admin" | "staff" | "user") {
     getSnapshot,
     () => SEED_NOTIFICATIONS,
   );
-  return notifications.filter((notification) => {
-    if (audience === "user") {
-      return (
-        notification.audience === "user" ||
-        notification.audience === "all" ||
-        notification.accountId === undefined
-      );
-    }
-    return matchesAudience(notification, audience);
-  });
+  return notifications.filter((notification) =>
+    matchesAudience(notification, audience),
+  );
 }
 
 export function useUnreadCount(audience: "admin" | "staff" | "user") {
