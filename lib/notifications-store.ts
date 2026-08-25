@@ -2,10 +2,11 @@
 
 import * as React from "react";
 
-export type NotificationAudience = "admin" | "staff" | "all";
+export type NotificationAudience = "admin" | "staff" | "user" | "all";
 export type Notification = {
   id: string;
   audience: NotificationAudience;
+  accountId?: string;
   title: string;
   body: string;
   createdAt: string;
@@ -91,28 +92,61 @@ function writeNotifications(next: Notification[]) {
 
 function matchesAudience(
   notification: Notification,
-  audience: "admin" | "staff",
+  audience: "admin" | "staff" | "user",
 ) {
   return notification.audience === audience || notification.audience === "all";
 }
 
-export function useNotifications(audience: "admin" | "staff") {
+export function addNotification(input: {
+  audience: NotificationAudience;
+  accountId?: string;
+  title: string;
+  body: string;
+  href?: string;
+}) {
+  const notification: Notification = {
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `notify-${Date.now()}`,
+    audience: input.audience,
+    accountId: input.accountId,
+    title: input.title,
+    body: input.body,
+    createdAt: new Date().toISOString(),
+    read: false,
+    href: input.href,
+  };
+
+  const next = [notification, ...getSnapshot()];
+  writeNotifications(next);
+  return notification;
+}
+
+export function useNotifications(audience: "admin" | "staff" | "user") {
   const notifications = React.useSyncExternalStore(
     subscribe,
     getSnapshot,
     () => SEED_NOTIFICATIONS,
   );
-  return notifications.filter((notification) =>
-    matchesAudience(notification, audience),
-  );
+  return notifications.filter((notification) => {
+    if (audience === "user") {
+      return (
+        notification.audience === "user" ||
+        notification.audience === "all" ||
+        notification.accountId === undefined
+      );
+    }
+    return matchesAudience(notification, audience);
+  });
 }
 
-export function useUnreadCount(audience: "admin" | "staff") {
+export function useUnreadCount(audience: "admin" | "staff" | "user") {
   return useNotifications(audience).filter((notification) => !notification.read)
     .length;
 }
 
-export function markAllRead(audience: "admin" | "staff") {
+export function markAllRead(audience: "admin" | "staff" | "user") {
   writeNotifications(
     getSnapshot().map((notification) =>
       matchesAudience(notification, audience)
@@ -127,5 +161,15 @@ export function markRead(id: string) {
     getSnapshot().map((notification) =>
       notification.id === id ? { ...notification, read: true } : notification,
     ),
+  );
+}
+
+export function getUserNotifications(accountId?: string) {
+  return getSnapshot().filter(
+    (notification) =>
+      notification.audience === "user" ||
+      notification.audience === "all" ||
+      (notification.accountId !== undefined &&
+        notification.accountId === accountId),
   );
 }

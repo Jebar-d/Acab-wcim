@@ -13,7 +13,6 @@ import {
   markAllRead,
   markRead,
   useNotifications,
-  useUnreadCount,
 } from "@/lib/notifications-store";
 
 function relativeTime(createdAt: string) {
@@ -27,9 +26,22 @@ function relativeTime(createdAt: string) {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-export function NotificationsMenu({ role }: { role: "admin" | "staff" }) {
-  const notifications = useNotifications(role);
-  const unreadCount = useUnreadCount(role);
+export function NotificationsMenu({
+  role,
+  accountId,
+}: {
+  role: "admin" | "staff" | "user";
+  accountId?: string;
+}) {
+  const notifications = useNotifications(role).filter(
+    (notification) =>
+      role !== "user" ||
+      notification.accountId === undefined ||
+      notification.accountId === accountId,
+  );
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read,
+  ).length;
   return (
     <Popover>
       <PopoverTrigger

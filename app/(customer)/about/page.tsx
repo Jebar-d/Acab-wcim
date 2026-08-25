@@ -1,109 +1,61 @@
-import Image from "next/image";
-import { Boxes, ClipboardList, Eye, Hammer } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const benefits = [
-  [
-    Boxes,
-    "Track materials",
-    "Keep construction materials and supplies easier to organize.",
-  ],
-  [
-    Eye,
-    "Improve visibility",
-    "Understand what is available before plans become urgent requests.",
-  ],
-  [
-    ClipboardList,
-    "Plan with clarity",
-    "Support procurement and project planning with better information.",
-  ],
-  [
-    Hammer,
-    "Support the worksite",
-    "Give teams and customers a simple way to communicate requirements.",
-  ],
-];
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-6xl px-6 py-20">
-      <div className="grid items-center gap-12 md:grid-cols-[1fr_0.8fr]">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-            About WCIM
-          </p>
-          <h1 className="mt-4 text-5xl font-semibold tracking-tight md:text-6xl">
-            A clearer way to manage construction materials.
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
-            Warehouse Construction Inventory Management is a system designed to
-            help construction-related businesses organize, monitor, and manage
-            construction materials and inventory.
-          </p>
-        </div>
-        <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-border">
-          <Image
-            src="/originkit/hero-20/building.png"
-            alt="Warehouse construction operations"
-            fill
-            className="object-cover"
-          />
-        </div>
+    <div className="mx-auto max-w-5xl px-6 py-20">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+        About WCIM
+      </p>
+      <h1 className="mt-4 max-w-3xl text-5xl font-semibold tracking-tight md:text-6xl">
+        Warehouse Construction Inventory Management for real projects.
+      </h1>
+
+      <div className="mt-8 max-w-3xl text-lg leading-8 text-muted-foreground">
+        WCIM is a practical system for construction-related businesses that need
+        a clearer way to manage materials, inventory, customer requests, and
+        warehouse movement. It helps teams stay organized from the first inquiry
+        to the final delivery.
       </div>
-      <Separator className="my-20" />
+
+      <Separator className="my-16" />
+
       <div className="grid gap-12 md:grid-cols-2">
         <section>
-          <h2 className="text-3xl font-semibold">What WCIM does</h2>
+          <h2 className="text-3xl font-semibold">What it is</h2>
           <p className="mt-4 leading-7 text-muted-foreground">
-            WCIM brings inventory visibility, material movement, suppliers, and
-            customer inquiries into one practical workspace. It helps teams
-            spend less time searching for information and more time moving
-            projects forward.
+            WCIM is designed to help construction businesses organize
+            construction materials, monitor inventory levels, manage customers
+            and clients, process inquiries, prepare quotations, check material
+            availability, and maintain a reliable warehouse operation.
           </p>
         </section>
+
         <section>
-          <h2 className="text-3xl font-semibold">Why inventory matters</h2>
+          <h2 className="text-3xl font-semibold">What it supports</h2>
           <p className="mt-4 leading-7 text-muted-foreground">
-            Construction depends on the right supplies arriving at the right
-            time. Organized inventory reduces confusion around stock, improves
-            handoffs, and gives teams a stronger foundation for procurement
-            decisions.
+            The system covers the operational work that keeps construction
+            supply flow moving: inquiry intake, quotation preparation, stock
+            checks, stock movement, procurement support, and transaction
+            tracking.
           </p>
         </section>
       </div>
-      <div className="mt-20">
-        <h2 className="text-3xl font-semibold">How WCIM helps</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {benefits.map(([Icon, title, body]) => (
-            <Card key={title as string} className="rounded-2xl">
-              <CardHeader>
-                <Icon className="size-5 text-primary" />
-                <CardTitle className="mt-4 text-lg">
-                  {title as string}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm leading-6 text-muted-foreground">
-                {body as string}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+
+      <div className="mt-16 rounded-[2rem] border border-border bg-muted/30 p-8 md:p-10">
+        <h2 className="text-3xl font-semibold">How the workflow is used</h2>
+        <ul className="mt-6 grid gap-3 text-base leading-7 text-muted-foreground md:grid-cols-2">
+          <li>• organize construction materials</li>
+          <li>• monitor inventory</li>
+          <li>• manage customers and clients</li>
+          <li>• process inquiries and quotations</li>
+          <li>• check material availability</li>
+          <li>• manage warehouse stock movements</li>
+          <li>• record stock in and stock out</li>
+          <li>• prepare delivery receipts</li>
+          <li>• support procurement</li>
+          <li>• maintain transaction and ledger records</li>
+        </ul>
       </div>
-      <section className="mt-20 rounded-3xl bg-muted/40 p-8 md:p-12">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-          Our goal
-        </p>
-        <h2 className="mt-3 text-3xl font-semibold">
-          Make material decisions easier to understand.
-        </h2>
-        <p className="mt-4 max-w-2xl leading-7 text-muted-foreground">
-          WCIM gives operations teams and customers a shared starting point for
-          better planning, clearer inquiries, and more dependable construction
-          work.
-        </p>
-      </section>
     </div>
   );
 }

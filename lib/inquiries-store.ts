@@ -4,12 +4,17 @@ import * as React from "react";
 
 export type Inquiry = {
   id: string;
+  accountId?: string;
+  clientId?: string;
   project: string;
+  projectType: string;
+  location: string;
   materials: string;
   quantity: string;
   timeline: string;
+  notes?: string;
   createdAt: string;
-  status: "pending";
+  status: "pending" | "reviewed" | "quoted" | "rejected";
 };
 const STORAGE_KEY = "acab-inquiries";
 const EVENT = "acab-inquiries-change";
@@ -49,11 +54,24 @@ export function createInquiry(
 ) {
   const inquiry: Inquiry = {
     ...input,
-    id: crypto.randomUUID(),
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `inquiry-${Date.now()}`,
     createdAt: new Date().toISOString(),
     status: "pending",
   };
   const next = [...snapshot(), inquiry];
+  cache = next;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event(EVENT));
+  return inquiry;
+}
+
+export function updateInquiry(id: string, patch: Partial<Inquiry>) {
+  const next = snapshot().map((inquiry) =>
+    inquiry.id === id ? { ...inquiry, ...patch } : inquiry,
+  );
   cache = next;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event(EVENT));

@@ -16,11 +16,21 @@ export default function InquirePage() {
     event.preventDefault();
     setSaving(true);
     const data = new FormData(event.currentTarget);
+    const project = String(data.get("project") ?? "");
+    const projectType = String(data.get("projectType") ?? "Residential");
+    const location = String(data.get("location") ?? "");
+    const materials = String(data.get("materials") ?? "");
+    const quantity = String(data.get("quantity") ?? "");
+    const timeline = String(data.get("timeline") ?? "");
+    const notes = String(data.get("notes") ?? "");
     createInquiry({
-      project: String(data.get("project")),
-      materials: String(data.get("materials")),
-      quantity: String(data.get("quantity")),
-      timeline: String(data.get("timeline")),
+      project,
+      projectType,
+      location,
+      materials,
+      quantity,
+      timeline,
+      notes,
     });
     setSubmitted(true);
     setSaving(false);
@@ -91,6 +101,16 @@ export default function InquirePage() {
           <div>
             <Label htmlFor="timeline">Timeline</Label>
             <Input id="timeline" name="timeline" required className="mt-1.5" />
+          </div>
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <textarea
+              id="notes"
+              name="notes"
+              rows={4}
+              className="mt-1.5 w-full rounded-2xl border border-input bg-transparent p-3 text-sm outline-none"
+              placeholder="Preferred material brand, required delivery date, project requirements, special instructions..."
+            />
           </div>
           <Button type="submit">Request quotation</Button>
         </form>

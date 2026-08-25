@@ -6,61 +6,88 @@ import { motion } from "motion/react";
 import {
   ArrowRight,
   Boxes,
-  Building2,
-  CheckCircle2,
   ClipboardList,
   HardHat,
-  House,
-  Landmark,
-  Search,
   ShieldCheck,
-  Wrench,
+  Warehouse,
 } from "lucide-react";
+import RoundCarousel from "@/components/originkit/ui/roundcarousel-custom-style";
+import KlarnaCarousel from "@/components/originkit/ui/button-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const projects = [
-  [House, "Residential", "Homes, renovations, and residential construction."],
-  [Building2, "Commercial", "Offices, retail spaces, and commercial projects."],
-  [Landmark, "Infrastructure", "Larger-scale construction and development."],
-  [Wrench, "Renovation", "Repairs, upgrades, and remodeling work."],
-] as const;
+const heroImages = [
+  { src: "/img1.jpe" },
+  { src: "/img2.jpe" },
+  { src: "/img3.jpe" },
+  { src: "/img4.jpe" },
+  { src: "/img5.jpe" },
+  { src: "/img6.jpg" },
+  { src: "/img7.jpe" },
+];
 
-const materials = [
-  ["Cement", "Foundation and masonry supplies", "Available"],
-  ["Steel bars", "Structural reinforcement materials", "Check availability"],
-  ["Lumber", "Framing and general construction timber", "Available"],
-  ["Hardware", "Practical supplies for every worksite", "Limited"],
+const materialItems = [
+  [
+    "Cement",
+    "High-strength cement for foundations, slabs, and masonry work.",
+    "Available",
+    "/cement.webp",
+  ],
+  [
+    "Steel Bars",
+    "Structural reinforcement for concrete and steel-framed systems.",
+    "Limited",
+    "/steel bars.jpg",
+  ],
+  [
+    "Lumber",
+    "Framing timber for structural and finish carpentry needs.",
+    "Available",
+    "/lumber.jpg",
+  ],
+  [
+    "Hardware",
+    "Fasteners, fixtures, and essential site hardware in stock.",
+    "Available",
+    "/img8.png",
+  ],
   [
     "Electrical",
-    "Essential electrical construction supplies",
+    "Wiring, breakers, and electrical accessories for active projects.",
     "Check availability",
+    "/img3.jpe",
   ],
-  ["Plumbing", "Reliable fittings and installation supplies", "Available"],
+  [
+    "Plumbing",
+    "Pipes, fittings, and water system components ready for delivery.",
+    "Available",
+    "/pipes.jpe",
+  ],
 ] as const;
 
 export function CustomerHomeSections() {
   return (
     <>
-      <section className="border-b border-border/70 px-6 py-16 md:py-24">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1fr_0.9fr]">
+      <section className="px-6 pb-16 pt-8 md:pb-24 md:pt-10">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_1fr]">
           <motion.div
-            initial={{ opacity: 0, y: 18 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.45 }}
+            className="max-w-xl"
           >
             <Badge variant="secondary" className="rounded-full px-3 py-1">
               Construction materials, organized
             </Badge>
-            <h1 className="mt-6 max-w-3xl text-5xl font-semibold tracking-tight md:text-7xl">
-              Build Better.{" "}
-              <span className="text-primary">Source Smarter.</span>
+            <h1 className="mt-6 text-5xl font-semibold tracking-[-0.06em] text-foreground md:text-7xl">
+              CONSTRUCTION MATERIALS
+              <span className="mt-2 block text-muted-foreground">
+                AND WAREHOUSE MANAGEMENT
+              </span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground">
-              Warehouse Construction Inventory Management helps construction
-              teams organize materials, discover available supplies, and connect
-              with the right resources for their next project.
+            <p className="mt-6 text-base leading-7 text-muted-foreground md:text-lg">
+              Find the materials your project needs, request a quotation, and
+              move from inquiry to delivery with a clearer warehouse process.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button
@@ -77,234 +104,169 @@ export function CustomerHomeSections() {
                 render={<Link href="#materials">Browse Materials</Link>}
               />
             </div>
-            <div className="mt-10 grid max-w-xl grid-cols-2 gap-4 text-sm text-muted-foreground md:grid-cols-4">
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
               {[
-                [Boxes, "Construction Materials"],
-                [HardHat, "Hardware & Supplies"],
-                [ClipboardList, "Project Inquiries"],
-                [CheckCircle2, "Organized Inventory"],
-              ].map(([Icon, label]) => (
-                <div key={label as string} className="flex items-center gap-2">
-                  <Icon className="size-4 text-primary" />
-                  {label as string}
-                </div>
+                "Customer Inquiry",
+                "Quotation",
+                "Order",
+                "Inventory",
+                "Warehouse",
+                "Delivery",
+              ].map((step) => (
+                <span key={step} className="inline-flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  {step}
+                </span>
               ))}
             </div>
           </motion.div>
+
           <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="relative overflow-hidden rounded-3xl border border-border bg-muted shadow-xl"
+            className="relative"
           >
-            <Image
-              src="/originkit/hero-20/building.png"
-              alt="Construction materials and warehouse operations"
-              width={900}
-              height={700}
-              priority
-              className="aspect-[5/4] object-cover"
-            />
-            <div className="absolute inset-x-5 bottom-5 rounded-2xl border border-white/30 bg-black/55 p-4 text-white backdrop-blur-md">
-              <p className="text-sm font-medium">From warehouse to worksite</p>
-              <p className="mt-1 text-xs text-white/70">
-                Clearer visibility for every material handoff.
-              </p>
+            <div className="overflow-hidden rounded-[2rem] border border-border bg-background shadow-[0_30px_80px_rgba(0,0,0,0.12)]">
+              <RoundCarousel
+                images={heroImages}
+                imageWidth={520}
+                imageHeight={680}
+                spacing={0}
+                speed={4.5}
+                direction="right"
+                drag
+                sensitivity={6}
+                tilt={-18}
+                perspective={2400}
+                cornerRadius={28}
+                innerDim={3.2}
+                background="#f5f5f3"
+                style={{ minHeight: 620 }}
+              />
             </div>
           </motion.div>
         </div>
       </section>
-      <section className="mx-auto max-w-6xl px-6 py-24" id="projects">
-        <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-            Start with your project
-          </p>
-          <h2 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
-            What are you building?
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Start with your project and we&apos;ll help you find the materials
-            and supplies you need.
-          </p>
-        </div>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {projects.map(([Icon, title, description]) => (
-            <Card
-              key={title}
-              className="rounded-2xl transition-transform duration-200 hover:-translate-y-1"
-            >
-              <CardHeader>
-                <Icon className="size-6 text-primary" />
-                <CardTitle className="mt-4">{title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{description}</p>
-                <Link
-                  href="/inquire"
-                  className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary"
-                >
-                  Explore Materials <ArrowRight className="size-3.5" />
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-      <section
-        className="border-y border-border bg-muted/30 px-6 py-24"
-        id="finder"
-      >
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-            Material finder
-          </p>
-          <h2 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
-            Find the materials your project needs.
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Search by material, then send us the requirements your team is
-            working with.
-          </p>
-          <div className="mx-auto mt-8 flex max-w-2xl items-center gap-3 rounded-2xl border border-border bg-background p-2 shadow-sm">
-            <Search className="ml-3 size-5 text-muted-foreground" />
-            <input
-              aria-label="Search materials"
-              placeholder="Search cement, steel bars, plywood, hardware..."
-              className="min-w-0 flex-1 bg-transparent px-1 py-3 text-sm outline-none"
-            />
-            <Button render={<Link href="/inquire">Inquire</Link>}>
-              Inquire
-            </Button>
-          </div>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {[
-              "Cement",
-              "Steel",
-              "Lumber",
-              "Hardware",
-              "Electrical",
-              "Plumbing",
-              "Safety Equipment",
-            ].map((category) => (
-              <Badge
-                key={category}
-                variant="outline"
-                className="rounded-full px-3 py-1"
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </section>
-      <section className="mx-auto max-w-6xl px-6 py-24" id="materials">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+
+      <section className="mx-auto max-w-6xl px-6 pb-20 pt-6" id="materials">
+        <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
               Materials
             </p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-tight">
-              Materials ready for your next project.
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+              Supply categories your project can rely on.
             </h2>
           </div>
-          <Link href="/inquire" className="text-sm font-medium text-primary">
-            View all materials <ArrowRight className="ml-1 inline size-4" />
+          <Link
+            href="/inquire"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary"
+          >
+            Request a quote <ArrowRight className="size-4" />
           </Link>
         </div>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {materials.map(([name, description, availability], index) => (
-            <Card key={name} className="overflow-hidden rounded-2xl">
-              <div
-                className={`h-32 ${index % 3 === 0 ? "bg-primary/15" : index % 3 === 1 ? "bg-amber-500/15" : "bg-emerald-500/15"} p-5`}
-              >
-                <Boxes className="size-7 text-primary" />
-              </div>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-semibold">{name}</h3>
-                  <Badge
-                    variant={
-                      availability === "Available" ? "secondary" : "outline"
-                    }
-                  >
-                    {availability}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+
+        <div className="overflow-hidden rounded-[2rem] border border-border bg-[#f7f5f0] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.08)] dark:bg-[#171717]">
+          <KlarnaCarousel
+            items={materialItems.map((item) => {
+              const [label, , status, src] = item;
+              return {
+                label: `${label} · ${status}`,
+                image: { src },
+                buttonImage: { src },
+              };
+            })}
+            cardRadius={18}
+            imageWidth={520}
+            imageHeight={420}
+            buttonCount={6}
+            buttonSize={72}
+            buttonRadius={18}
+            curve={6}
+            gap={18}
+            labelShow
+            labelColor="#111111"
+            backgroundColor="#f7f5f0"
+            labelFont={{
+              fontFamily: "Inter",
+              fontWeight: 600,
+              fontSize: 18,
+              lineHeight: "1.3em",
+            }}
+          />
         </div>
       </section>
-      <section className="px-6 py-20">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 overflow-hidden rounded-3xl bg-primary p-8 text-primary-foreground md:grid-cols-[1fr_0.8fr] md:p-12">
+
+      <section className="border-t border-border bg-muted/30 px-6 py-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-[1fr_0.9fr]">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary-foreground/70">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
               Project support
             </p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-tight">
-              Have a project in mind?
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+              Tell us what the site needs.
             </h2>
-            <p className="mt-4 max-w-xl text-primary-foreground/80">
-              Tell us what you&apos;re building and what materials you need. Our
-              team can help you organize your requirements.
+            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+              Whether you need structural materials, general supplies, or a
+              faster warehouse turnaround, WCIM helps your team shape the right
+              inquiry and keep the next steps clear.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button
-                variant="secondary"
-                render={<Link href="/inquire">Start an Inquiry</Link>}
-              />
+              <Button render={<Link href="/inquire">Start an Inquiry</Link>} />
               <Button
                 variant="outline"
-                className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 render={<Link href="/contact">Request a Quote</Link>}
               />
             </div>
           </div>
-          <div className="relative hidden aspect-[4/3] overflow-hidden rounded-2xl md:block">
+          <div className="overflow-hidden rounded-[2rem] border border-border bg-muted shadow-[0_24px_60px_rgba(0,0,0,0.1)]">
             <Image
-              src="/originkit/hero-20/building.png"
-              alt="Construction project support"
-              fill
-              className="object-cover"
+              src="/img8.png"
+              alt="Project support"
+              width={960}
+              height={760}
+              className="h-full w-full object-cover"
             />
           </div>
         </div>
       </section>
+
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="max-w-2xl">
+        <div className="mb-8 max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
             How it works
           </p>
           <h2 className="mt-3 text-4xl font-semibold tracking-tight">
-            From project idea to materials.
+            From customer inquiry to material delivery.
           </h2>
         </div>
-        <div className="mt-10 grid gap-8 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {[
             [
               "01",
-              "Tell us about your project",
-              "Describe the type of construction project you&apos;re working on.",
+              "Submit your request",
+              "Share the project, material needs, and timeline in one inquiry.",
             ],
             [
               "02",
-              "Tell us what you need",
-              "Select materials, quantities, and requirements.",
+              "Review and confirm",
+              "Staff checks availability, inventory, and checklist requirements before confirming the quotation.",
             ],
             [
               "03",
-              "Get assistance",
-              "Our team can review your request and help with availability and sourcing.",
+              "Warehouse release",
+              "Approved materials move through the warehouse and delivery workflow with clearer tracking.",
             ],
           ].map(([number, title, body]) => (
-            <div key={number}>
-              <span className="text-5xl font-semibold text-primary/40">
+            <div
+              key={number}
+              className="rounded-[1.5rem] border border-border bg-card p-5"
+            >
+              <span className="text-5xl font-semibold tracking-tight text-primary/35">
                 {number}
               </span>
-              <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+              <h3 className="mt-4 text-xl font-semibold">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {body}
               </p>
@@ -312,60 +274,66 @@ export function CustomerHomeSections() {
           ))}
         </div>
       </section>
-      <section className="border-t border-border bg-muted/30 px-6 py-24">
+
+      <section className="border-t border-border bg-muted/30 px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="max-w-2xl">
+          <div className="mb-8 max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
               Why WCIM
             </p>
             <h2 className="mt-3 text-4xl font-semibold tracking-tight">
-              Built around the way construction teams work.
+              Built to keep construction work moving.
             </h2>
           </div>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {[
-              [
-                Boxes,
-                "Organized Materials",
-                "Keep construction materials easier to discover and manage.",
-              ],
-              [
-                ClipboardList,
-                "Faster Inquiries",
-                "Send project requirements without unnecessary back-and-forth.",
-              ],
-              [
-                ShieldCheck,
-                "Better Visibility",
-                "Understand what materials and supplies are available.",
-              ],
-              [
-                HardHat,
-                "Project Support",
-                "Give customers a direct way to communicate their requirements.",
-              ],
-            ].map(([Icon, title, body]) => (
+              {
+                icon: Boxes,
+                title: "Material visibility",
+                body: "Track available stock, pending requests, and delivery movement in one place.",
+              },
+              {
+                icon: ClipboardList,
+                title: "Faster quotation reviews",
+                body: "Review project needs with clearer inventory and warehouse coordination.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Inventory confidence",
+                body: "Check what is in stock before committing to delivery timelines.",
+              },
+              {
+                icon: HardHat,
+                title: "Worksite readiness",
+                body: "Support field teams with a dependable material and warehouse process.",
+              },
+            ].map(({ icon: Icon, title, body }) => (
               <div
-                key={title as string}
-                className="rounded-2xl border border-border bg-background p-5"
+                key={title}
+                className="rounded-[1.5rem] border border-border bg-background p-5"
               >
                 <Icon className="size-5 text-primary" />
-                <h3 className="mt-5 font-semibold">{title as string}</h3>
+                <h3 className="mt-4 text-lg font-semibold">{title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {body as string}
+                  {body}
                 </p>
               </div>
             ))}
           </div>
         </div>
       </section>
-      <section className="mx-auto max-w-6xl px-6 py-24 text-center">
-        <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
-          Ready to build?
+
+      <section className="mx-auto max-w-6xl px-6 pb-24 pt-20 text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm text-muted-foreground">
+          <Warehouse className="size-4 text-primary" />
+          WCIM warehouse coordination
+        </div>
+        <h2 className="mt-6 text-4xl font-semibold tracking-tight md:text-5xl">
+          Ready to build with a clearer process?
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          Start your next project with a clearer way to source construction
-          materials.
+        <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+          Bring your next project requirement to WCIM and move from inquiry to
+          quotation with a more organized workflow.
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Button

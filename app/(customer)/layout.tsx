@@ -1,12 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { Menu, Warehouse } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
+import { NotificationsMenu } from "@/components/ui/notifications-menu";
+import { useSession } from "@/lib/auth-store";
 
 export default function CustomerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = useSession();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 px-6 backdrop-blur-xl">
@@ -25,6 +31,9 @@ export default function CustomerLayout({
             <Link href="/faq">FAQ</Link>
           </div>
           <div className="flex items-center gap-2">
+            {session ? (
+              <NotificationsMenu role="user" accountId={session.id} />
+            ) : null}
             <Link
               href="/login"
               className="hidden rounded-2xl border border-border px-3 py-2 text-sm font-medium transition hover:bg-muted sm:inline-flex"
