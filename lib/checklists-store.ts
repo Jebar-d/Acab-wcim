@@ -10,67 +10,66 @@ export type ChecklistItem = {
 
 export type Checklist = {
   id: string;
-
   title: string;
-
   status:
     | "Pending Review"
     | "Checklist Pending"
     | "Ready for Confirmation"
     | "Confirmed"
     | "Rejected";
-
   items: ChecklistItem[];
-
   createdAt: string;
 };
 
 const STORAGE_KEY = "acab-checklists";
-
 const EVENT = "acab-checklists-change";
 
-/*
- * Standard checklist used for warehouse construction
- * material requests and quotations.
- */
 const STANDARD_CHECKLIST_ITEMS = [
   "Verify quotation details and requested quantities",
   "Verify customer/project information",
   "Check material availability in inventory",
+  "Verify warehouse storage location",
+  "Confirm supplier availability for missing materials",
+  "Verify delivery schedule and required date",
+  "Verify transportation or delivery requirements",
+  "Confirm project location and delivery destination",
+];
+
+const REMOVED_CHECKLIST_ITEMS = new Set([
   "Check available stock against requested quantity",
   "Check minimum stock level after release",
   "Verify material SKU and specifications",
-  "Verify warehouse storage location",
   "Check material condition and quality",
-  "Confirm supplier availability for missing materials",
   "Confirm supplier lead time for replenishment",
   "Check purchase order requirement for unavailable materials",
-  "Verify delivery schedule and required date",
   "Check warehouse loading/release capacity",
-  "Verify transportation or delivery requirements",
-  "Confirm project location and delivery destination",
   "Review special customer requirements",
-];
+]);
 
 const SEED: Checklist[] = [
   {
     id: "check-standard-material-review",
-
     title: "Standard Construction Material Review",
-
     status: "Checklist Pending",
-
     items: STANDARD_CHECKLIST_ITEMS.map((text, index) => ({
       id: `standard-${index + 1}`,
       text,
       completed: false,
     })),
-
     createdAt: new Date().toISOString(),
   },
 ];
 
 let cache: Checklist[] | null = null;
+
+function cleanExistingChecklists(checklists: Checklist[]): Checklist[] {
+  return checklists.map((checklist) => ({
+    ...checklist,
+    items: checklist.items.filter(
+      (item) => !REMOVED_CHECKLIST_ITEMS.has(item.text),
+    ),
+  }));
+}
 
 function loadFromStorage(): Checklist[] {
   if (typeof window === "undefined") {
@@ -86,7 +85,15 @@ function loadFromStorage(): Checklist[] {
       return SEED;
     }
 
-    return JSON.parse(raw) as Checklist[];
+    const stored = JSON.parse(raw) as Checklist[];
+
+    const cleaned = cleanExistingChecklists(stored);
+
+    if (JSON.stringify(stored) !== JSON.stringify(cleaned)) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+    }
+
+    return cleaned;
   } catch {
     return SEED;
   }
@@ -117,12 +124,10 @@ function subscribe(callback: () => void) {
   };
 
   window.addEventListener(EVENT, callback);
-
   window.addEventListener("storage", handleStorage);
 
   return () => {
     window.removeEventListener(EVENT, callback);
-
     window.removeEventListener("storage", handleStorage);
   };
 }
@@ -133,9 +138,7 @@ function createStandardItems(): ChecklistItem[] {
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `item-${Date.now()}-${index}`,
-
     text,
-
     completed: false,
   }));
 }
@@ -155,10 +158,6 @@ export function addChecklist(input: { title: string }) {
 
     status: "Checklist Pending",
 
-    /*
-     * Every new checklist now gets the full
-     * warehouse/construction checklist.
-     */
     items: createStandardItems(),
 
     createdAt: new Date().toISOString(),
@@ -172,8 +171,12 @@ export function addChecklist(input: { title: string }) {
 }
 
 export function toggleChecklistItem(checklistId: string, itemId: string) {
-  const next = loadFromStorage().map((checklist) => {
+  const next: Checklist[] = loadFromStorage().map((checklist) => {
     if (checklist.id !== checklistId) {
+      return checklist;
+    }
+
+    if (checklist.status === "Confirmed") {
       return checklist;
     }
 
@@ -204,7 +207,7 @@ export function toggleChecklistItem(checklistId: string, itemId: string) {
 }
 
 export function updateChecklist(id: string, patch: Partial<Checklist>) {
-  const next = loadFromStorage().map((checklist) =>
+  const next: Checklist[] = loadFromStorage().map((checklist) =>
     checklist.id === id
       ? {
           ...checklist,
@@ -217,5 +220,9 @@ export function updateChecklist(id: string, patch: Partial<Checklist>) {
 }
 
 export function deleteChecklist(id: string) {
-  write(loadFromStorage().filter((checklist) => checklist.id !== id));
+  const next: Checklist[] = loadFromStorage().filter(
+    (checklist) => checklist.id !== id,
+  );
+
+  write(next);
 }

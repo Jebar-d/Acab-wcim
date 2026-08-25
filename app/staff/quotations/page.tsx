@@ -18,8 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { useSession } from "@/lib/auth-store";
-
 import { addNotification } from "@/lib/notifications-store";
 
 import {
@@ -55,7 +53,6 @@ function StatusBadge({ status }: { status: Quotation["status"] }) {
 export default function QuotationsPage() {
   const quotations = useQuotations();
 
-  const session = useSession();
 
   function handleConfirm(quotation: Quotation) {
     confirmQuotation(quotation.id, {

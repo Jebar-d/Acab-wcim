@@ -2,13 +2,7 @@
 
 import * as React from "react";
 
-import {
-  CheckCircle2,
-  Circle,
-  ClipboardList,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { CheckCircle2, Circle, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -151,14 +145,6 @@ export default function ChecklistPage() {
                     </button>
                   ))}
                 </div>
-
-                {checklist.status === "Ready for Confirmation" && (
-                  <div className="mt-4 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
-                    <ClipboardList className="size-4 text-primary" />
-                    All checklist requirements have been completed. This review
-                    is ready for quotation confirmation.
-                  </div>
-                )}
               </CardContent>
             </Card>
           );

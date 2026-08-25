@@ -262,20 +262,20 @@ export function reviewAccount(
 ) {
   const accounts = loadAccountsFromStorage();
 
- const next: Account[] = accounts.map((account): Account => {
-   if (account.id === id) {
-     return {
-       ...account,
-       status: "active",
-       reviewedBy: "reviewerId",
-       reviewedAt: new Date().toISOString(),
-     };
-   }
+  const next: Account[] = accounts.map((account): Account => {
+    if (account.id === id) {
+      return {
+        ...account,
+        status: decision === "approve" ? "active" : "rejected",
+        reviewedBy: reviewerName,
+        reviewedAt: new Date().toISOString(),
+      };
+    }
 
-   return account;
- });
+    return account;
+  });
 
- writeAccounts(next);
+  writeAccounts(next);
 }
 
 function subscribeAccounts(callback: () => void) {
