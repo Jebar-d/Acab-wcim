@@ -96,12 +96,6 @@ export default function LoginPage() {
             {submitting ? "Signing in..." : "Sign in"}
           </Button>
         </form>
-
-        <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          Demo admin login:{" "}
-          <span className="font-medium text-foreground">admin@acab.com</span> /{" "}
-          <span className="font-medium text-foreground">admin123</span>
-        </div>
       </CardContent>
 
       <CardFooter className="justify-center border-t border-border pt-4">

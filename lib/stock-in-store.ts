@@ -17,26 +17,41 @@ export type StockIn = {
 
 const STORAGE_KEY = "acab-stock-in";
 const EVENT = "acab-stock-in-change";
-let cache: StockIn[] | null = null;
+
 const SEED: StockIn[] = [];
+
+let cache: StockIn[] | null = null;
+
 function loadFromStorage(): StockIn[] {
-  if (typeof window === "undefined") return SEED;
+  if (typeof window === "undefined") {
+    return SEED;
+  }
+
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as StockIn[]) : [];
+
+    return raw ? (JSON.parse(raw) as StockIn[]) : SEED;
   } catch {
     return SEED;
   }
 }
+
 function getSnapshot(): StockIn[] {
-  if (cache === null) cache = loadFromStorage();
+  if (cache === null) {
+    cache = loadFromStorage();
+  }
+
   return cache;
 }
+
 function write(next: StockIn[]) {
   cache = next;
+
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
   window.dispatchEvent(new Event(EVENT));
 }
+
 function subscribe(callback: () => void) {
   const handleStorage = (event: StorageEvent) => {
     if (event.key === STORAGE_KEY || event.key === null) {
@@ -44,10 +59,14 @@ function subscribe(callback: () => void) {
       callback();
     }
   };
+
   window.addEventListener(EVENT, callback);
+
   window.addEventListener("storage", handleStorage);
+
   return () => {
     window.removeEventListener(EVENT, callback);
+
     window.removeEventListener("storage", handleStorage);
   };
 }
@@ -55,21 +74,38 @@ function subscribe(callback: () => void) {
 export function useStockIns(): StockIn[] {
   return React.useSyncExternalStore(subscribe, getSnapshot, () => SEED);
 }
-export function addStockIn(input: Omit<StockIn, "id" | "createdAt">) {
+
+/*
+ * status is intentionally omitted here because addStockIn()
+ * automatically sets every new stock-in record to Confirmed.
+ */
+export function addStockIn(
+  input: Omit<StockIn, "id" | "createdAt" | "status">,
+) {
   const item: StockIn = {
     ...input,
+
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `stockin-${Date.now()}`,
+
     createdAt: new Date().toISOString(),
+
     status: "Confirmed",
   };
+
   const next = [item, ...loadFromStorage()];
+
   write(next);
 
+  /*
+   * Update the Materials inventory automatically.
+   */
   const existing = window.localStorage.getItem("acab-materials");
+
   const list: Material[] = existing ? (JSON.parse(existing) as Material[]) : [];
+
   const materialMatch = list.find(
     (material) =>
       material.sku === item.sku ||
@@ -78,18 +114,33 @@ export function addStockIn(input: Omit<StockIn, "id" | "createdAt">) {
 
   if (materialMatch) {
     const updated: Material[] = list.map((material) => {
-      if (material.id !== materialMatch.id) return material;
+      if (material.id !== materialMatch.id) {
+        return material;
+      }
+
       const quantity =
         Number(material.quantity || 0) + Number(item.quantity || 0);
+
       const status: Material["status"] =
         quantity <= Number(material.minimumStock || 0)
           ? "Limited"
           : "Available";
-      return { ...material, quantity, status };
+
+      return {
+        ...material,
+        quantity,
+        status,
+      };
     });
+
     window.localStorage.setItem("acab-materials", JSON.stringify(updated));
+
     window.dispatchEvent(new Event("acab-materials-change"));
   } else {
+    /*
+     * If the material does not exist yet,
+     * automatically add it to inventory.
+     */
     addMaterial({
       sku: item.sku,
       name: item.material,
@@ -104,7 +155,8 @@ export function addStockIn(input: Omit<StockIn, "id" | "createdAt">) {
   return item;
 }
 
-// lib/stock-in-store.ts — add
 export function deleteStockIn(id: string) {
-  write(loadFromStorage().filter((entry) => entry.id !== id));
+  const next = loadFromStorage().filter((entry) => entry.id !== id);
+
+  write(next);
 }

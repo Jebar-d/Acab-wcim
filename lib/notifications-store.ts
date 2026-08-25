@@ -3,98 +3,86 @@
 import * as React from "react";
 
 export type NotificationAudience = "admin" | "staff" | "user" | "all";
+
 export type Notification = {
   id: string;
+
   audience: NotificationAudience;
+
   accountId?: string;
+
   title: string;
+
   body: string;
+
   createdAt: string;
+
   read: boolean;
+
   href?: string;
 };
 
 const STORAGE_KEY = "acab-notifications";
-const NOTIFICATIONS_EVENT = "acab-notifications-change";
-const SEED_NOTIFICATIONS: Notification[] = [
-  {
-    id: "seed-admin-registration",
-    audience: "admin",
-    title: "New staff registration awaiting approval",
-    body: "Jamie Cruz submitted an employee registration for review.",
-    createdAt: "2026-08-18T14:30:00.000Z",
-    read: false,
-    href: "/approvals",
-  },
-  {
-    id: "seed-staff-stock",
-    audience: "staff",
-    title: "Low stock: Cement",
-    body: "Only 12 bags remain in warehouse inventory.",
-    createdAt: "2026-08-20T08:15:00.000Z",
-    read: false,
-    href: "/staff/alerts",
-  },
-  {
-    id: "seed-all-welcome",
-    audience: "all",
-    title: "Welcome to ACAB WCIM",
-    body: "Your workspace is ready for the next project.",
-    createdAt: "2026-08-15T09:00:00.000Z",
-    read: true,
-  },
-];
 
-let notificationsCache: Notification[] | null = null;
+const EVENT = "acab-notifications-change";
 
-function loadNotifications(): Notification[] {
-  if (typeof window === "undefined") return SEED_NOTIFICATIONS;
+const SEED: Notification[] = [];
+
+let cache: Notification[] | null = null;
+
+function loadFromStorage(): Notification[] {
+  if (typeof window === "undefined") {
+    return SEED;
+  }
+
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
+
     if (!raw) {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(SEED_NOTIFICATIONS),
-      );
-      return SEED_NOTIFICATIONS;
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED));
+
+      return SEED;
     }
+
     return JSON.parse(raw) as Notification[];
   } catch {
-    return SEED_NOTIFICATIONS;
+    return SEED;
   }
 }
 
-function getSnapshot() {
-  if (notificationsCache === null) notificationsCache = loadNotifications();
-  return notificationsCache;
+function getSnapshot(): Notification[] {
+  if (cache === null) {
+    cache = loadFromStorage();
+  }
+
+  return cache;
+}
+
+function write(next: Notification[]) {
+  cache = next;
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+  window.dispatchEvent(new Event(EVENT));
 }
 
 function subscribe(callback: () => void) {
   const handleStorage = (event: StorageEvent) => {
     if (event.key === STORAGE_KEY || event.key === null) {
-      notificationsCache = null;
+      cache = null;
       callback();
     }
   };
-  window.addEventListener(NOTIFICATIONS_EVENT, callback);
+
+  window.addEventListener(EVENT, callback);
+
   window.addEventListener("storage", handleStorage);
+
   return () => {
-    window.removeEventListener(NOTIFICATIONS_EVENT, callback);
+    window.removeEventListener(EVENT, callback);
+
     window.removeEventListener("storage", handleStorage);
   };
-}
-
-function writeNotifications(next: Notification[]) {
-  notificationsCache = next;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(NOTIFICATIONS_EVENT));
-}
-
-function matchesAudience(
-  notification: Notification,
-  audience: "admin" | "staff" | "user",
-) {
-  return notification.audience === audience || notification.audience === "all";
 }
 
 export function addNotification(input: {
@@ -108,61 +96,106 @@ export function addNotification(input: {
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
-        : `notify-${Date.now()}`,
+        : `notification-${Date.now()}`,
+
     audience: input.audience,
+
     accountId: input.accountId,
+
     title: input.title,
+
     body: input.body,
+
     createdAt: new Date().toISOString(),
+
     read: false,
+
     href: input.href,
   };
 
-  const next = [notification, ...getSnapshot()];
-  writeNotifications(next);
+  write([notification, ...getSnapshot()]);
+
   return notification;
 }
 
-export function useNotifications(audience: "admin" | "staff" | "user") {
+export function useNotifications(
+  audience: "admin" | "staff" | "user",
+
+  accountId?: string,
+) {
   const notifications = React.useSyncExternalStore(
     subscribe,
     getSnapshot,
-    () => SEED_NOTIFICATIONS,
+    () => SEED,
   );
-  return notifications.filter((notification) =>
-    matchesAudience(notification, audience),
-  );
+
+  return notifications.filter((notification) => {
+    if (notification.audience === "all") {
+      return true;
+    }
+
+    if (notification.audience !== audience) {
+      return false;
+    }
+
+    /*
+     * General notification for a role.
+     */
+    if (!notification.accountId) {
+      return true;
+    }
+
+    /*
+     * Account-specific notification.
+     */
+    return notification.accountId === accountId;
+  });
 }
 
-export function useUnreadCount(audience: "admin" | "staff" | "user") {
-  return useNotifications(audience).filter((notification) => !notification.read)
-    .length;
+export function useUnreadCount(
+  audience: "admin" | "staff" | "user",
+
+  accountId?: string,
+) {
+  return useNotifications(audience, accountId).filter(
+    (notification) => !notification.read,
+  ).length;
 }
 
-export function markAllRead(audience: "admin" | "staff" | "user") {
-  writeNotifications(
+export function markRead(id: string) {
+  write(
     getSnapshot().map((notification) =>
-      matchesAudience(notification, audience)
-        ? { ...notification, read: true }
+      notification.id === id
+        ? {
+            ...notification,
+            read: true,
+          }
         : notification,
     ),
   );
 }
 
-export function markRead(id: string) {
-  writeNotifications(
-    getSnapshot().map((notification) =>
-      notification.id === id ? { ...notification, read: true } : notification,
-    ),
-  );
-}
+export function markAllRead(
+  audience: "admin" | "staff" | "user",
 
-export function getUserNotifications(accountId?: string) {
-  return getSnapshot().filter(
-    (notification) =>
-      notification.audience === "user" ||
-      notification.audience === "all" ||
-      (notification.accountId !== undefined &&
-        notification.accountId === accountId),
+  accountId?: string,
+) {
+  write(
+    getSnapshot().map((notification) => {
+      const audienceMatches =
+        notification.audience === audience || notification.audience === "all";
+
+      const accountMatches =
+        !notification.accountId || notification.accountId === accountId;
+
+      if (audienceMatches && accountMatches) {
+        return {
+          ...notification,
+          read: true,
+        };
+      }
+
+      return notification;
+    }),
   );
 }

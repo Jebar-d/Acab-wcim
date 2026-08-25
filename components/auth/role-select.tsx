@@ -1,33 +1,34 @@
 "use client";
 
-import type { ChangeEvent } from "react";
-
 import type { Role } from "@/lib/auth-store";
-import { cn } from "@/lib/utils";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type RoleSelectProps = {
   value: Role;
   onChange: (role: Role) => void;
-  className?: string;
 };
 
-export function RoleSelect({ value, onChange, className }: RoleSelectProps) {
-  function handleChange(event: ChangeEvent<HTMLSelectElement>) {
-    onChange(event.target.value as Role);
-  }
-
+export function RoleSelect({ value, onChange }: RoleSelectProps) {
   return (
-    <select
-      value={value}
-      onChange={handleChange}
-      className={cn(
-        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-        className,
-      )}
-    >
-      <option value="user">User</option>
-      <option value="staff">Staff / Employee</option>
-      <option value="admin">Admin</option>
-    </select>
+    <Select value={value} onValueChange={(value) => onChange(value as Role)}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Select account type" />
+      </SelectTrigger>
+
+      <SelectContent>
+        <SelectItem value="user">User</SelectItem>
+
+        <SelectItem value="staff">Staff / Employee</SelectItem>
+
+        <SelectItem value="admin">Admin</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }

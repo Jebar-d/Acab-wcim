@@ -1,21 +1,9 @@
-// lib/auth-store.ts (full file)
 "use client";
 
 import * as React from "react";
 
-// ---------------------------------------------------------------------------
-// Mock accounts "backend", entirely in the browser (localStorage), so the
-// register -> pending -> admin approval -> login flow is fully clickable
-// without a real API or database behind it yet.
-//
-// NOT production-ready: passwords are stored in plain text, there's no
-// server-side session/cookie, and nothing here is validated on a server.
-// Swap this module for real API calls + hashed passwords + server sessions
-// once a backend exists — the component code that calls it (login/register
-// forms, the approvals page) shouldn't need to change much.
-// ---------------------------------------------------------------------------
-
 export type Role = "user" | "staff" | "admin";
+
 export type AccountStatus = "active" | "pending" | "rejected";
 
 export type Account = {
@@ -24,7 +12,6 @@ export type Account = {
   email: string;
   password: string;
   role: Role;
-  /** Required for "staff" and "admin" — what an existing admin checks the registration against. */
   employeeId?: string;
   status: AccountStatus;
   createdAt: string;
@@ -34,52 +21,52 @@ export type Account = {
 
 const STORAGE_KEY = "acab-accounts";
 const SESSION_KEY = "acab-session";
+
 const ACCOUNTS_EVENT = "acab-accounts-change";
+
 const SESSION_EVENT = "acab-session-change";
 
-// Seeded so the demo is interactive immediately: a verified admin who can
-// sign in and review requests, plus one staff request already sitting in
-// the queue.
-const SEED_ACCOUNTS: Account[] = [
-  {
-    id: "seed-admin",
-    name: "Admin User",
-    email: "admin@acab.com",
-    password: "admin123",
-    role: "admin",
-    employeeId: "ADM-0001",
-    status: "active",
-    createdAt: "2026-01-05T09:00:00.000Z",
-    reviewedBy: "System",
-    reviewedAt: "2026-01-05T09:00:00.000Z",
-  },
-  {
-    id: "seed-staff-pending",
-    name: "Jamie Cruz",
-    email: "jamie.cruz@acab.com",
-    password: "staff123",
-    role: "staff",
-    employeeId: "EMP-1042",
-    status: "pending",
-    createdAt: "2026-08-18T14:30:00.000Z",
-  },
-];
+/*
+ * No demo accounts.
+ *
+ * The first admin can now register normally.
+ */
+const SEED_ACCOUNTS: Account[] = [];
 
-// In-memory cache so useSyncExternalStore gets a stable reference between
-// actual changes (JSON.parse-ing localStorage on every call would return a
-// new array identity each time and trip React's "getSnapshot should be
-// cached" loop guard).
 let accountsCache: Account[] | null = null;
 
 function loadAccountsFromStorage(): Account[] {
-  if (typeof window === "undefined") return SEED_ACCOUNTS;
+  if (typeof window === "undefined") {
+    return SEED_ACCOUNTS;
+  }
+
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
+
     if (!raw) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_ACCOUNTS));
+
       return SEED_ACCOUNTS;
     }
-    return JSON.parse(raw) as Account[];
+
+    const accounts = JSON.parse(raw) as Account[];
+
+    /*
+     * Remove the old demo accounts automatically.
+     */
+    const cleaned = accounts.filter(
+      (account) =>
+        account.id !== "seed-admin" &&
+        account.id !== "seed-staff-pending" &&
+        account.email !== "admin@acab.com" &&
+        account.email !== "jamie.cruz@acab.com",
+    );
+
+    if (cleaned.length !== accounts.length) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+    }
+
+    return cleaned;
   } catch {
     return SEED_ACCOUNTS;
   }
@@ -89,29 +76,35 @@ function getAccountsSnapshot(): Account[] {
   if (accountsCache === null) {
     accountsCache = loadAccountsFromStorage();
   }
+
   return accountsCache;
 }
 
 function writeAccounts(accounts: Account[]) {
   accountsCache = accounts;
+
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
+
   window.dispatchEvent(new Event(ACCOUNTS_EVENT));
 }
 
 function readSessionId(): string | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   return window.localStorage.getItem(SESSION_KEY);
 }
 
 function writeSessionId(id: string | null) {
-  if (id) window.localStorage.setItem(SESSION_KEY, id);
-  else window.localStorage.removeItem(SESSION_KEY);
+  if (id) {
+    window.localStorage.setItem(SESSION_KEY, id);
+  } else {
+    window.localStorage.removeItem(SESSION_KEY);
+  }
+
   window.dispatchEvent(new Event(SESSION_EVENT));
 }
-
-// ---------------------------------------------------------------------------
-// Mutations
-// ---------------------------------------------------------------------------
 
 export type RegisterInput = {
   name: string;
@@ -121,121 +114,169 @@ export type RegisterInput = {
 };
 
 export type RegisterResult =
-  | { ok: true; account: Account }
-  | { ok: false; error: string };
+  | {
+      ok: true;
+      account: Account;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
-/**
- * Staff/admin IDs are issued by the system, never typed in by the
- * registrant — letting people pick their own ID would make it meaningless
- * as something an admin can verify against. Sequential per role, seeded
- * from whatever's already in storage so it keeps counting up correctly
- * even after a refresh.
- */
 function generateEmployeeId(role: Role, existingAccounts: Account[]): string {
   const prefix = role === "admin" ? "ADM" : "EMP";
-  const base = role === "admin" ? 1 : 1042;
-  const numbers = existingAccounts
-    .filter((a) => a.role === role && a.employeeId?.startsWith(`${prefix}-`))
-    .map((a) => parseInt(a.employeeId!.slice(prefix.length + 1), 10))
-    .filter((n) => !Number.isNaN(n));
-  const next = numbers.length > 0 ? Math.max(...numbers) + 1 : base;
-  return `${prefix}-${String(next).padStart(4, "0")}`;
+
+  const existingNumbers = existingAccounts
+    .filter(
+      (account) =>
+        account.role === role && account.employeeId?.startsWith(`${prefix}-`),
+    )
+    .map((account) => Number(account.employeeId?.replace(`${prefix}-`, "")))
+    .filter((number) => !Number.isNaN(number));
+
+  const nextNumber =
+    existingNumbers.length > 0
+      ? Math.max(...existingNumbers) + 1
+      : role === "admin"
+        ? 1
+        : 1001;
+
+  return `${prefix}-${String(nextNumber).padStart(4, "0")}`;
 }
 
 export function registerAccount(input: RegisterInput): RegisterResult {
   const accounts = loadAccountsFromStorage();
+
+  const name = input.name.trim();
+
   const email = input.email.trim().toLowerCase();
 
-  if (!input.name.trim() || !email || !input.password) {
-    return { ok: false, error: "Please fill in all required fields." };
-  }
-  if (accounts.some((a) => a.email.toLowerCase() === email)) {
-    return { ok: false, error: "An account with this email already exists." };
+  if (!name || !email || !input.password) {
+    return {
+      ok: false,
+      error: "Please fill in all required fields.",
+    };
   }
 
-  const needsId = input.role === "staff" || input.role === "admin";
+  if (accounts.some((account) => account.email.toLowerCase() === email)) {
+    return {
+      ok: false,
+      error: "An account with this email already exists.",
+    };
+  }
+
+  const needsEmployeeId = input.role === "staff" || input.role === "admin";
+
+  /*
+   * Users can use the system immediately.
+   *
+   * Admin accounts are also active immediately so the system
+   * does not depend on a permanent demo admin account.
+   *
+   * Staff accounts remain pending for admin approval.
+   */
+  const status: AccountStatus = input.role === "staff" ? "pending" : "active";
 
   const account: Account = {
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `acc-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    name: input.name.trim(),
+
+    name,
     email,
     password: input.password,
     role: input.role,
-    employeeId: needsId ? generateEmployeeId(input.role, accounts) : undefined,
-    // Users are active right away; staff/admin need a verified admin to
-    // check their generated ID first.
-    status: input.role === "user" ? "active" : "pending",
+
+    employeeId: needsEmployeeId
+      ? generateEmployeeId(input.role, accounts)
+      : undefined,
+
+    status,
+
     createdAt: new Date().toISOString(),
   };
 
   writeAccounts([...accounts, account]);
-  return { ok: true, account };
+
+  return {
+    ok: true,
+    account,
+  };
 }
 
 export type LoginResult =
-  | { ok: true; account: Account }
-  | { ok: false; error: string };
+  | {
+      ok: true;
+      account: Account;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 export function login(email: string, password: string): LoginResult {
   const accounts = loadAccountsFromStorage();
+
   const account = accounts.find(
-    (a) => a.email.toLowerCase() === email.trim().toLowerCase(),
+    (item) => item.email.toLowerCase() === email.trim().toLowerCase(),
   );
 
   if (!account || account.password !== password) {
-    return { ok: false, error: "Incorrect email or password." };
+    return {
+      ok: false,
+      error: "Incorrect email or password.",
+    };
   }
+
   if (account.status === "pending") {
     return {
       ok: false,
-      error:
-        "This account is still waiting on admin verification. You'll be able to sign in once your ID has been checked.",
+      error: "This staff account is waiting for admin approval.",
     };
   }
+
   if (account.status === "rejected") {
     return {
       ok: false,
-      error: "This registration was rejected. Contact an administrator.",
+      error: "This registration was rejected. Please contact an administrator.",
     };
   }
 
   writeSessionId(account.id);
-  return { ok: true, account };
+
+  return {
+    ok: true,
+    account,
+  };
 }
 
 export function logout() {
   writeSessionId(null);
 }
 
-/** Admin action: approve or reject a pending staff/admin registration. */
 export function reviewAccount(
   id: string,
   decision: "approve" | "reject",
   reviewerName: string,
 ) {
   const accounts = loadAccountsFromStorage();
-  const next = accounts.map((a) =>
-    a.id === id
-      ? {
-          ...a,
-          status: (decision === "approve"
-            ? "active"
-            : "rejected") as AccountStatus,
-          reviewedBy: reviewerName,
-          reviewedAt: new Date().toISOString(),
-        }
-      : a,
-  );
-  writeAccounts(next);
-}
 
-// ---------------------------------------------------------------------------
-// Reactive hooks — useSyncExternalStore, no effects, no setState-in-effect
-// warnings.
-// ---------------------------------------------------------------------------
+ const next: Account[] = accounts.map((account): Account => {
+   if (account.id === id) {
+     return {
+       ...account,
+       status: "active",
+       reviewedBy: "reviewerId",
+       reviewedAt: new Date().toISOString(),
+     };
+   }
+
+   return account;
+ });
+
+ writeAccounts(next);
+}
 
 function subscribeAccounts(callback: () => void) {
   const handleStorage = (event: StorageEvent) => {
@@ -244,19 +285,26 @@ function subscribeAccounts(callback: () => void) {
       callback();
     }
   };
+
   window.addEventListener(ACCOUNTS_EVENT, callback);
+
   window.addEventListener("storage", handleStorage);
+
   return () => {
     window.removeEventListener(ACCOUNTS_EVENT, callback);
+
     window.removeEventListener("storage", handleStorage);
   };
 }
 
 function subscribeSession(callback: () => void) {
   window.addEventListener(SESSION_EVENT, callback);
+
   window.addEventListener("storage", callback);
+
   return () => {
     window.removeEventListener(SESSION_EVENT, callback);
+
     window.removeEventListener("storage", callback);
   };
 }
@@ -275,12 +323,18 @@ export function useSession(): Account | null {
     readSessionId,
     () => null,
   );
+
   const accounts = useAccounts();
-  if (!sessionId) return null;
-  return accounts.find((a) => a.id === sessionId) ?? null;
+
+  if (!sessionId) {
+    return null;
+  }
+
+  return accounts.find((account) => account.id === sessionId) ?? null;
 }
 
 export function usePendingCount(): number {
   const accounts = useAccounts();
-  return accounts.filter((a) => a.status === "pending").length;
+
+  return accounts.filter((account) => account.status === "pending").length;
 }

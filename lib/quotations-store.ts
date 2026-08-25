@@ -13,6 +13,7 @@ export type QuotationStatus =
 
 export type Quotation = {
   id: string;
+
   inquiryId?: string;
   clientId?: string;
   accountId?: string;
@@ -42,12 +43,24 @@ export type Quotation = {
     | "Rejected";
 
   confirmedAt?: string;
+
   confirmationSentAt?: string;
+
+  /*
+   * Set when the customer confirms the order.
+   */
+  customerConfirmedAt?: string;
+
+  /*
+   * Created order ID.
+   */
+  orderId?: string;
 
   createdAt: string;
 };
 
 const STORAGE_KEY = "acab-quotations";
+
 const EVENT = "acab-quotations-change";
 
 const SEED: Quotation[] = [];
@@ -55,13 +68,16 @@ const SEED: Quotation[] = [];
 let cache: Quotation[] | null = null;
 
 function loadFromStorage(): Quotation[] {
-  if (typeof window === "undefined") return SEED;
+  if (typeof window === "undefined") {
+    return SEED;
+  }
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
 
     if (!raw) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED));
+
       return SEED;
     }
 
@@ -96,20 +112,22 @@ function subscribe(callback: () => void) {
   };
 
   window.addEventListener(EVENT, callback);
+
   window.addEventListener("storage", handleStorage);
 
   return () => {
     window.removeEventListener(EVENT, callback);
+
     window.removeEventListener("storage", handleStorage);
   };
 }
 
 export function useQuotations(): Quotation[] {
-  return React.useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    () => SEED,
-  );
+  return React.useSyncExternalStore(subscribe, getSnapshot, () => SEED);
+}
+
+export function getQuotationById(id: string): Quotation | null {
+  return loadFromStorage().find((quotation) => quotation.id === id) ?? null;
 }
 
 export function createQuotation(
@@ -130,21 +148,15 @@ export function createQuotation(
 
     status: input.status ?? "pending",
 
-    checklistStatus:
-      input.checklistStatus ?? "Pending Review",
+    checklistStatus: input.checklistStatus ?? "Pending Review",
   };
 
-  const next = [created, ...loadFromStorage()];
-
-  write(next);
+  write([created, ...loadFromStorage()]);
 
   return created;
 }
 
-export function updateQuotation(
-  id: string,
-  patch: Partial<Quotation>,
-) {
+export function updateQuotation(id: string, patch: Partial<Quotation>) {
   const next = loadFromStorage().map((quotation) =>
     quotation.id === id
       ? {
@@ -160,11 +172,7 @@ export function updateQuotation(
 }
 
 export function deleteQuotation(id: string) {
-  const next = loadFromStorage().filter(
-    (quotation) => quotation.id !== id,
-  );
-
-  write(next);
+  write(loadFromStorage().filter((quotation) => quotation.id !== id));
 }
 
 export function confirmQuotation(
@@ -175,24 +183,21 @@ export function confirmQuotation(
 ) {
   const now = new Date().toISOString();
 
-  const next: Quotation[] = loadFromStorage().map((quotation) =>
-    quotation.id === id
-      ? {
-          ...quotation,
-          status: "confirmed",
-          checklistStatus: "Confirmed",
-          confirmedAt: now,
+  return updateQuotation(id, {
+    status: "confirmed",
 
-          confirmationSentAt: options?.sendNotification
-            ? now
-            : quotation.confirmationSentAt,
-        }
-      : quotation,
-  );
+    checklistStatus: "Confirmed",
 
-  write(next);
+    confirmedAt: now,
 
-  return next.find(
-    (quotation) => quotation.id === id,
-  ) ?? null;
+    confirmationSentAt: options?.sendNotification ? now : undefined,
+  });
+}
+
+export function confirmCustomerOrder(quotationId: string, orderId: string) {
+  return updateQuotation(quotationId, {
+    customerConfirmedAt: new Date().toISOString(),
+
+    orderId,
+  });
 }
