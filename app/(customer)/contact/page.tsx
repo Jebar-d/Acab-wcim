@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import LinkPreview from "@/components/originkit/ui/link-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,22 +19,8 @@ export default function ContactPage() {
           Let&apos;s move the work forward.
         </h1>
         <p className="mt-5 text-muted-foreground">
-          Reach us at{" "}
-          <LinkPreview
-            title="hello@acab.com"
-            link="mailto:hello@acab.com"
-            imageMode="custom"
-            customImage={{ src: "/originkit/hero-20/building.png" }}
-            previewWidth={240}
-            previewHeight={140}
-            radius={16}
-            shadow
-            shadowColor="rgba(0,0,0,.2)"
-            textColor="currentColor"
-            underlineColor="currentColor"
-            font={{}}
-          />
-          .
+          Have a question about materials, inventory, or your construction
+          requirements? Send us a message.
         </p>
       </div>
       <form
@@ -53,6 +38,14 @@ export default function ContactPage() {
         <div>
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" required className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="phone">Phone</Label>
+          <Input id="phone" type="tel" className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="subject">Subject</Label>
+          <Input id="subject" required className="mt-1.5" />
         </div>
         <div>
           <Label htmlFor="message">Message</Label>

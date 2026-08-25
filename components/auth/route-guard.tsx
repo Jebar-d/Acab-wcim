@@ -1,9 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useSession } from "@/lib/auth-store";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const subscribeHydration = () => () => {};
+const getClientHydration = () => true;
+const getServerHydration = () => false;
 
 export function RouteGuard({
   children,
@@ -13,6 +17,11 @@ export function RouteGuard({
   area: "admin" | "staff";
 }) {
   const session = useSession();
+  const hydrated = useSyncExternalStore(
+    subscribeHydration,
+    getClientHydration,
+    getServerHydration,
+  );
   const pathname = usePathname();
   const router = useRouter();
   const blockedStaffRoute =
@@ -23,9 +32,10 @@ export function RouteGuard({
     );
   const blocked = !session || session.role === "user" || blockedStaffRoute;
   useEffect(() => {
+    if (!hydrated) return;
     if (blocked) router.replace(blockedStaffRoute ? "/staff" : "/");
-  }, [blocked, blockedStaffRoute, router]);
-  if (blocked) return <Skeleton className="h-40 w-full" />;
+  }, [blocked, blockedStaffRoute, hydrated, router]);
+  if (!hydrated || blocked) return <Skeleton className="h-40 w-full" />;
   if (area === "admin" && session.role !== "admin")
     return <Skeleton className="h-40 w-full" />;
   return <>{children}</>;

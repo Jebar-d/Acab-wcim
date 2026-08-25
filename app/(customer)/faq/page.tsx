@@ -7,16 +7,28 @@ import { Card, CardContent } from "@/components/ui/card";
 
 const questions = [
   [
-    "Who is ACAB for?",
-    "ACAB is built for construction businesses managing materials, suppliers, and warehouse handoffs.",
+    "What types of construction materials can I inquire about?",
+    "You can ask about common construction materials, hardware, electrical, plumbing, and safety supplies.",
   ],
   [
-    "Can I request a quotation without an account?",
-    "Yes. Use the order form and our team will follow up with the details.",
+    "Can I check whether a material is available?",
+    "Submit an inquiry with the materials and quantities you need. The team can review current availability.",
   ],
   [
-    "Does ACAB replace our backend?",
-    "This demo uses a local workspace. It is designed to grow into your operational backend.",
+    "How do I request a quotation?",
+    "Use the Request a Quote form and include your project details, timeline, and material requirements.",
+  ],
+  [
+    "Can I submit multiple materials in one inquiry?",
+    "Yes. Include each material and quantity in the requirements field so the request stays together.",
+  ],
+  [
+    "Do I need an account to browse materials?",
+    "No. Customer pages and material information are available without an account.",
+  ],
+  [
+    "How will I know if my inquiry has been reviewed?",
+    "Our team can follow up using the contact details included with your request.",
   ],
 ];
 export default function FAQPage() {

@@ -53,8 +53,27 @@ export default function InquirePage() {
           className="mt-10 flex flex-col gap-4 rounded-2xl border border-border p-6"
         >
           <div>
-            <Label htmlFor="project">Project details</Label>
+            <Label htmlFor="projectType">Project type</Label>
+            <select
+              id="projectType"
+              name="projectType"
+              className="mt-1.5 h-9 w-full rounded-2xl border border-input bg-transparent px-3 text-sm"
+              defaultValue="Residential"
+            >
+              <option>Residential</option>
+              <option>Commercial</option>
+              <option>Infrastructure</option>
+              <option>Renovation</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="project">Project name</Label>
             <Input id="project" name="project" required className="mt-1.5" />
+          </div>
+          <div>
+            <Label htmlFor="location">Location</Label>
+            <Input id="location" name="location" required className="mt-1.5" />
           </div>
           <div>
             <Label htmlFor="materials">Materials needed</Label>
