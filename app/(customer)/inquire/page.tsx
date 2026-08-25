@@ -1,8 +1,11 @@
+// app/(customer)/inquire/page.tsx (full file — the actual bug fix)
 "use client";
 
 import { useState } from "react";
 import { toast } from "sonner";
 import { createInquiry } from "@/lib/inquiries-store";
+import { createQuotation } from "@/lib/quotations-store";
+import { useSession } from "@/lib/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InquirePage() {
+  const session = useSession();
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -23,7 +27,9 @@ export default function InquirePage() {
     const quantity = String(data.get("quantity") ?? "");
     const timeline = String(data.get("timeline") ?? "");
     const notes = String(data.get("notes") ?? "");
-    createInquiry({
+
+    const inquiry = createInquiry({
+      accountId: session?.id,
       project,
       projectType,
       location,
@@ -32,6 +38,24 @@ export default function InquirePage() {
       timeline,
       notes,
     });
+
+    // The inquiry alone doesn't put anything in front of staff — it has to
+    // become a Quotation for it to show up in /staff/quotations, which is
+    // what "Request quotation" on this form is actually promising.
+    createQuotation({
+      inquiryId: inquiry.id,
+      accountId: session?.id,
+      customerName: session?.name,
+      projectName: project,
+      projectType,
+      location,
+      materials,
+      quantity,
+      timeline,
+      notes,
+      status: "pending",
+    });
+
     setSubmitted(true);
     setSaving(false);
     toast.success("Quotation request received");

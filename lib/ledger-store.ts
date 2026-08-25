@@ -65,3 +65,8 @@ export function addLedgerEntry(input: Omit<LedgerEntry, "id" | "createdAt">) {
   write(next);
   return entry;
 }
+
+// lib/ledger-store.ts — add
+export function deleteLedgerEntry(id: string) {
+  write(loadFromStorage().filter((entry) => entry.id !== id));
+}

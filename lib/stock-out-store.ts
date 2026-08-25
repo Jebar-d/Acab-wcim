@@ -130,3 +130,8 @@ export function confirmStockOut(id: string) {
   window.dispatchEvent(new Event("acab-delivery-receipts-change"));
   return stockOut;
 }
+
+// lib/stock-out-store.ts — add
+export function deleteStockOut(id: string) {
+  write(loadFromStorage().filter((entry) => entry.id !== id));
+}

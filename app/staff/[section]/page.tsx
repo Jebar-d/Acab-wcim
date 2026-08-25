@@ -126,7 +126,9 @@ export default async function StaffSectionPage({
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Staff / {page.group}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {page.title}
+          </h1>
           <p className="text-sm text-muted-foreground">{page.description}</p>
         </div>
       </div>

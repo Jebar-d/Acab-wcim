@@ -103,3 +103,8 @@ export function addStockIn(input: Omit<StockIn, "id" | "createdAt">) {
 
   return item;
 }
+
+// lib/stock-in-store.ts — add
+export function deleteStockIn(id: string) {
+  write(loadFromStorage().filter((entry) => entry.id !== id));
+}

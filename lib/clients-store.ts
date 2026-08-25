@@ -140,3 +140,8 @@ export function ensureClientForAccount(account: {
 export function useClients(): Client[] {
   return React.useSyncExternalStore(subscribe, getSnapshot, () => SEED_CLIENTS);
 }
+
+// lib/clients-store.ts — add
+export function deleteClient(id: string) {
+  write(loadFromStorage().filter((client) => client.id !== id));
+}

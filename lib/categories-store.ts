@@ -110,3 +110,8 @@ export function toggleCategoryStatus(id: string) {
   });
   write(next);
 }
+
+// lib/categories-store.ts — add
+export function deleteCategory(id: string) {
+  write(loadFromStorage().filter((category) => category.id !== id));
+}

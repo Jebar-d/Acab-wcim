@@ -106,3 +106,19 @@ export function updateOrder(id: string, patch: Partial<Order>) {
   );
   write(next);
 }
+
+// lib/orders-store.ts — add
+export function addOrder(input: Omit<Order, "id" | "createdAt" | "status"> & { status?: OrderStatus }) {
+  const order: Order = {
+    ...input,
+    id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `order-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    status: input.status ?? "Pending",
+  };
+  write([order, ...loadFromStorage()]);
+  return order;
+}
+
+export function deleteOrder(id: string) {
+  write(loadFromStorage().filter((order) => order.id !== id));
+}

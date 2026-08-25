@@ -71,3 +71,8 @@ export function addDeliveryReceipt(
   write(next);
   return next[0];
 }
+
+// lib/delivery-receipts-store.ts — add
+export function deleteDeliveryReceipt(id: string) {
+  write(loadFromStorage().filter((entry) => entry.id !== id));
+}
