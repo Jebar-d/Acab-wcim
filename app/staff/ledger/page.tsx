@@ -1,76 +1,94 @@
-// app/staff/ledger/page.tsx
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { DataTablePage } from "@/components/staff/data-table-page";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  addLedgerEntry,
-  deleteLedgerEntry,
-  useLedger,
-} from "@/lib/ledger-store";
-import type { LedgerEntry } from "@/lib/ledger-store";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useLedger } from "@/lib/ledger-store";
 
 export default function LedgerPage() {
   const entries = useLedger();
+
   return (
-    <DataTablePage
-      title="Ledger"
-      description="Review procurement transactions and balances."
-      addLabel="Add entry"
-      emptyLabel="No ledger entries yet."
-      data={entries}
-      onAdd={(v) =>
-        addLedgerEntry({
-          type: (v.type as LedgerEntry["type"]) || "Procurement",
-          reference: v.reference,
-          description: v.description,
-          amount: Number(v.amount) || 0,
-          date: v.date || new Date().toISOString().slice(0, 10),
-          party: v.party,
-          status: "Draft",
-        })
-      }
-      onDelete={deleteLedgerEntry}
-      fields={[
-        { key: "reference", label: "Reference #", placeholder: "PO-1001" },
-        {
-          key: "type",
-          label: "Type",
-          placeholder: "Procurement / Inventory / Sale",
-        },
-        {
-          key: "description",
-          label: "Description",
-          placeholder: "Cement purchase",
-        },
-        { key: "party", label: "Party", placeholder: "Cebu Steel & Rebar Co." },
-        {
-          key: "amount",
-          label: "Amount",
-          type: "number",
-          placeholder: "15000",
-        },
-        { key: "date", label: "Date", type: "date" },
-      ]}
-      columns={[
-        { key: "reference", label: "Reference" },
-        { key: "type", label: "Type" },
-        { key: "party", label: "Party" },
-        {
-          key: "amount",
-          label: "Amount",
-          render: (e) => `₱${e.amount.toLocaleString()}`,
-        },
-        {
-          key: "status",
-          label: "Status",
-          render: (e) => (
-            <Badge variant={e.status === "Posted" ? "secondary" : "outline"}>
-              {e.status}
-            </Badge>
-          ),
-        },
-      ]}
-    />
+    <Card>
+      <CardHeader>
+        <CardTitle>Ledger</CardTitle>
+        <CardDescription>
+          Automatically generated from purchase orders, invoices, customer
+          orders, delivery receipts, and stock transactions.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        {entries.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No transactions yet. Transactions will appear here automatically
+            when orders, deliveries, stock movements, purchase orders, or
+            invoices are created.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Customer / Party</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {entries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{entry.date}</TableCell>
+
+                    <TableCell className="font-medium">
+                      {entry.reference}
+                    </TableCell>
+
+                    <TableCell>{entry.source}</TableCell>
+
+                    <TableCell>{entry.party || "—"}</TableCell>
+
+                    <TableCell>{entry.project || "—"}</TableCell>
+
+                    <TableCell>{entry.description}</TableCell>
+
+                    <TableCell>
+                      {entry.amount > 0
+                        ? `₱${entry.amount.toLocaleString()}`
+                        : "—"}
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge
+                        variant={
+                          entry.status === "Posted"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {entry.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
