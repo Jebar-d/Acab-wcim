@@ -1,8 +1,7 @@
-// @ts-nocheck
 "use client";
 
-import { Suspense, useEffect, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Suspense, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { SteelBarsModel } from "./material-models";
 import { GLTFModel } from "./gltf-model";
@@ -29,14 +28,7 @@ function Pedestal() {
 }
 
 function SceneFog() {
-  const { scene } = useThree();
-  useEffect(() => {
-    scene.fog = new THREE.Fog("#f4f2ec", 5, 10);
-    return () => {
-      scene.fog = null;
-    };
-  }, [scene]);
-  return null;
+  return <fog attach="fog" args={["#f4f2ec", 5, 10]} />;
 }
 
 function CarouselRig({

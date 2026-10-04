@@ -31,8 +31,8 @@ function SpeechBubble({
       "(prefers-reduced-motion: reduce)"
     ).matches;
     if (reduceMotion) {
-      setTypedText(text);
-      return;
+      const frame = window.requestAnimationFrame(() => setTypedText(text));
+      return () => window.cancelAnimationFrame(frame);
     }
 
     let index = 0;
