@@ -64,13 +64,13 @@ export default function LedgerPage() {
     const chronological = [...entries].sort((a, b) =>
       a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt),
     );
-    let balance = 0;
-    const withBalances = chronological.map((entry) => {
+    const withBalances = chronological.reduce<Array<(typeof chronological)[number] & { runningBalance: number }>>((rows, entry) => {
       const amount = Number(entry.amount) || 0;
-      balance += isMoneyIn(entryType(entry)) ? amount : -amount;
-      return { ...entry, runningBalance: balance };
-    });
-    return withBalances.reverse();
+      const previousBalance = rows.at(-1)?.runningBalance ?? 0;
+      const runningBalance = previousBalance + (isMoneyIn(entryType(entry)) ? amount : -amount);
+      return [...rows, { ...entry, runningBalance }];
+    }, []);
+    return [...withBalances].reverse();
   }, [entries]);
 
   const totals = React.useMemo(() => entries.reduce(

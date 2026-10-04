@@ -9,24 +9,23 @@ import { DataTablePage, type FieldConfig } from "@/components/staff/data-table-p
 import { addPurchaseOrder, receivePurchaseOrder, updatePurchaseOrderStatus, usePurchaseOrders, type PurchaseOrder, type PurchaseOrderStatus } from "@/lib/purchase-orders-store";
 import { useMaterials } from "@/lib/materials-store";
 import { useSuppliers } from "@/lib/suppliers-store";
+import { useSearchParams } from "next/navigation";
 
 const STATUSES: PurchaseOrderStatus[] = ["Pending", "Ordered", "Received", "Cancelled"];
 const currency = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount || 0);
 
 export default function PurchaseOrdersPage() {
+  return <React.Suspense fallback={null}><PurchaseOrdersContent /></React.Suspense>;
+}
+
+function PurchaseOrdersContent() {
   const orders = usePurchaseOrders();
   const suppliers = useSuppliers();
   const materials = useMaterials();
-  const [filter, setFilter] = React.useState("All");
-  const [preferredMaterialId, setPreferredMaterialId] = React.useState("");
-
-  React.useEffect(() => {
-    const status = new URLSearchParams(window.location.search).get("status");
-    if (status && STATUSES.some((item) => item.toLowerCase() === status.toLowerCase())) {
-      setFilter(STATUSES.find((item) => item.toLowerCase() === status.toLowerCase())!);
-    }
-    setPreferredMaterialId(new URLSearchParams(window.location.search).get("materialId") ?? "");
-  }, []);
+  const searchParams = useSearchParams();
+  const requestedStatus = searchParams.get("status");
+  const filter = STATUSES.find((item) => item.toLowerCase() === requestedStatus?.toLowerCase()) ?? "All";
+  const preferredMaterialId = searchParams.get("materialId") ?? "";
 
   const fields = React.useMemo<FieldConfig[]>(() => [
     { key: "supplierId", label: "Supplier", type: "select", defaultValue: suppliers.find((s) => s.status === "active")?.id ?? "", options: suppliers.filter((s) => s.status === "active").map((s) => ({ value: s.id, label: s.name })) },
@@ -86,7 +85,7 @@ export default function PurchaseOrdersPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h1 className="text-2xl font-semibold">Purchase Orders</h1><p className="text-sm text-muted-foreground">Order materials from suppliers and receive them into inventory.</p></div>
-        <div className="flex flex-wrap gap-2">{["All", ...STATUSES].map((status) => <Button key={status} size="sm" variant={filter === status ? "default" : "outline"} onClick={() => setFilter(status)}>{status}</Button>)}</div>
+        <div className="flex flex-wrap gap-2">{["All", ...STATUSES].map((status) => <Button key={status} size="sm" variant={filter === status ? "default" : "outline"} render={<Link href={status === "All" ? "/staff/purchase-orders" : `/staff/purchase-orders?status=${encodeURIComponent(status)}`} />}>{status}</Button>)}</div>
       </div>
       {suppliers.filter((supplier) => supplier.status === "active").length === 0 && <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">Add and activate a supplier before creating a purchase order. <Link className="font-medium underline" href="/staff/suppliers">Manage suppliers</Link></p>}
       {materials.length === 0 && <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">Add materials to inventory before creating purchase orders. <Link className="font-medium underline" href="/staff/materials">Manage materials</Link></p>}

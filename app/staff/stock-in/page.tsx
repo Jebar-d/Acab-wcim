@@ -7,16 +7,19 @@ import { DataTablePage, type FieldConfig } from "@/components/staff/data-table-p
 import { addStockIn, useStockIns } from "@/lib/stock-in-store";
 import { useMaterials } from "@/lib/materials-store";
 import { useSuppliers } from "@/lib/suppliers-store";
+import { useSearchParams } from "next/navigation";
 
 export default function StockInPage() {
+  return <React.Suspense fallback={null}><StockInContent /></React.Suspense>;
+}
+
+function StockInContent() {
   const entries = useStockIns();
   const materials = useMaterials();
   const allSuppliers = useSuppliers();
   const suppliers = React.useMemo(() => allSuppliers.filter((supplier) => supplier.status === "active"), [allSuppliers]);
-  const [preferredSku, setPreferredSku] = React.useState("");
-  React.useEffect(() => {
-    setPreferredSku(new URLSearchParams(window.location.search).get("sku") ?? "");
-  }, []);
+  const searchParams = useSearchParams();
+  const preferredSku = searchParams.get("sku") ?? "";
   const fields = React.useMemo<FieldConfig[]>(() => [
     { key: "sku", label: "Material", type: "select", defaultValue: materials.some((material) => material.sku === preferredSku) ? preferredSku : materials[0]?.sku ?? "", options: materials.map((material) => ({ value: material.sku, label: `${material.name} · ${material.sku} (${material.quantity} ${material.unit})` })) },
     { key: "quantity", label: "Quantity received", type: "number", defaultValue: "1", placeholder: "Quantity received" },
