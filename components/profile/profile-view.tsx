@@ -46,13 +46,16 @@ import {
 } from "@/lib/addresses-store";
 import { cancelOrder, useOrders } from "@/lib/orders-store";
 import { useInquiries } from "@/lib/inquiries-store";
-import { useQuotations } from "@/lib/quotations-store";
+import {
+  requestQuotationChanges,
+  useQuotations,
+} from "@/lib/quotations-store";
 import { useDeliveryReceipts } from "@/lib/delivery-receipts-store";
 import {
   DeliveryReceiptDialog,
   shortAddress,
 } from "@/components/delivery-receipt-view";
-import { useNotifications } from "@/lib/notifications-store";
+import { addNotification, useNotifications } from "@/lib/notifications-store";
 import { useTransactions } from "@/lib/transactions-store";
 
 function formatDate(iso: string) {
@@ -83,6 +86,7 @@ const ORDER_STEPS = [
 ] as const;
 
 const QUOTATION_LABELS: Record<string, string> = {
+  "changes-requested": "Changes requested",
   pending: "Submitted",
   reviewing: "Under review",
   "inventory-check": "Checking inventory",
@@ -113,6 +117,9 @@ export function ProfileView() {
   const quotations = useQuotations();
   const receipts = useDeliveryReceipts();
   const [tab, setTab] = React.useState<TabId>("overview");
+  const [changeRequestId, setChangeRequestId] = React.useState<string | null>(null);
+  const [changeRequestText, setChangeRequestText] = React.useState("");
+  const [savingChangeRequest, setSavingChangeRequest] = React.useState(false);
 
   // Open the tab named in the URL, e.g. /profile?tab=orders
   React.useEffect(() => {
@@ -180,6 +187,39 @@ export function ProfileView() {
   const visibleTabs = tabs.filter(
     (item) => !("userOnly" in item && item.userOnly) || roleIsUser,
   );
+
+  async function submitQuotationChanges(quotationId: string, projectName: string) {
+    const message = changeRequestText.trim();
+    if (!message) {
+      toast.error("Describe what you would like changed.");
+      return;
+    }
+    setSavingChangeRequest(true);
+    try {
+      await requestQuotationChanges(quotationId, message);
+      addNotification({
+        audience: "staff",
+        title: "Customer requested quotation changes",
+        body: `${currentSession.name} requested changes to "${projectName}".`,
+        href: "/staff/quotations",
+      });
+      addNotification({
+        audience: "admin",
+        title: "Customer requested quotation changes",
+        body: `${currentSession.name} requested changes to "${projectName}".`,
+        href: "/staff/quotations",
+      });
+      setChangeRequestId(null);
+      setChangeRequestText("");
+      toast.success("Your change request was sent to staff.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not send your change request.",
+      );
+    } finally {
+      setSavingChangeRequest(false);
+    }
+  }
 
   async function saveProfile() {
     try {
@@ -463,8 +503,8 @@ export function ProfileView() {
               <CardHeader>
                 <CardTitle>Quotations</CardTitle>
                 <CardDescription>
-                  Track your quotation requests and confirm the ones that are
-                  ready.
+                  Review quotations, request changes, and confirm the final
+                  version before it becomes an order.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -498,14 +538,64 @@ export function ProfileView() {
                       <p className="mt-2 text-sm text-muted-foreground">
                         {q.materials} · {q.quantity} · {q.timeline}
                       </p>
+                      {q.customerChangeRequest && q.status === "changes-requested" && (
+                        <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                          <span className="font-medium">Your requested changes: </span>
+                          {q.customerChangeRequest}
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            Staff will review the updated quotation and send it back for your approval.
+                          </span>
+                        </p>
+                      )}
                       {q.status === "confirmed" && !q.customerConfirmedAt && (
-                        <Button
-                          size="sm"
-                          className="mt-3"
-                          render={<Link href={`/order-confirmation/${q.id}`} />}
-                        >
-                          Review &amp; confirm order
-                        </Button>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            render={<Link href={`/order-confirmation/${q.id}`} />}
+                          >
+                            Review &amp; confirm quotation
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setChangeRequestId(changeRequestId === q.id ? null : q.id);
+                              setChangeRequestText("");
+                            }}
+                          >
+                            Request changes
+                          </Button>
+                        </div>
+                      )}
+                      {changeRequestId === q.id && (
+                        <div className="mt-3 space-y-2">
+                          <label htmlFor={`quote-changes-${q.id}`} className="text-sm font-medium">
+                            What would you like changed or added?
+                          </label>
+                          <textarea
+                            id={`quote-changes-${q.id}`}
+                            className="min-h-24 w-full rounded-xl border border-input bg-background p-3 text-sm"
+                            value={changeRequestText}
+                            onChange={(event) => setChangeRequestText(event.target.value)}
+                            placeholder="Describe changes to materials, quantities, timeline, or other quotation details."
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setChangeRequestId(null)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={savingChangeRequest}
+                              onClick={() => void submitQuotationChanges(q.id, q.projectName)}
+                            >
+                              {savingChangeRequest ? "Sending…" : "Send change request"}
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))

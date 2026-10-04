@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import { createInquiry } from "@/lib/inquiries-store";
 import { createQuotation } from "@/lib/quotations-store";
 import { useSession } from "@/lib/auth-store";
 import { ensureClientForAccount } from "@/lib/clients-store";
+import { formatAddress, useAddresses } from "@/lib/addresses-store";
 import { addNotification } from "@/lib/notifications-store";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type FieldKey = "customerName" | "customerEmail" | "customerPhone" | "location";
+
 export default function InquirePage() {
   const session = useSession();
   const router = useRouter();
@@ -34,6 +38,45 @@ export default function InquirePage() {
   const [projectType, setProjectType] = useState("Residential");
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Pull the customer's profile (name, email, phone, default address) into the form.
+  const addresses = useAddresses();
+  const defaultAddress =
+    addresses.find((address) => address.isDefault) ?? addresses[0] ?? null;
+  const [fields, setFields] = useState<Record<FieldKey, string>>({
+    customerName: "",
+    customerEmail: "",
+    customerPhone: "",
+    location: "",
+  });
+  const edited = useRef(new Set<FieldKey>());
+
+  const profileName = session?.name ?? "";
+  const profileEmail = session?.email ?? "";
+  const profilePhone = session?.phone || defaultAddress?.phone || "";
+  const profileLocation = defaultAddress ? formatAddress(defaultAddress) : "";
+
+  useEffect(() => {
+    const profile: Record<FieldKey, string> = {
+      customerName: profileName,
+      customerEmail: profileEmail,
+      customerPhone: profilePhone,
+      location: profileLocation,
+    };
+    // Never overwrite something the customer already typed.
+    setFields((current) => {
+      const next = { ...current };
+      for (const key of Object.keys(profile) as FieldKey[]) {
+        if (!edited.current.has(key)) next[key] = profile[key];
+      }
+      return next;
+    });
+  }, [profileName, profileEmail, profilePhone, profileLocation]);
+
+  function setField(key: FieldKey, value: string) {
+    edited.current.add(key);
+    setFields((current) => ({ ...current, [key]: value }));
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,6 +96,9 @@ export default function InquirePage() {
       const materials = String(data.get("materials") ?? "").trim();
       const quantity = String(data.get("quantity") ?? "").trim();
       const timeline = String(data.get("timeline") ?? "").trim();
+      const customerName = String(
+        data.get("customerName") ?? session.name ?? "",
+      ).trim();
       const email = String(
         data.get("customerEmail") ?? session.email ?? "",
       ).trim();
@@ -66,10 +112,12 @@ export default function InquirePage() {
         return;
       }
 
-      const client = ensureClientForAccount({
+      const client = await ensureClientForAccount({
         id: session.id,
-        name: session.name,
+        name: customerName || session.name,
         email: session.email,
+        phone: phone || session.phone,
+        address: profileLocation,
       });
 
       const inquiry = await createInquiry({
@@ -87,7 +135,7 @@ export default function InquirePage() {
         inquiryId: inquiry.id,
         clientId: client.id,
         accountId: session.id,
-        customerName: session.name,
+        customerName: customerName || session.name,
         customerEmail: email,
         customerPhone: phone,
         projectName: project,
@@ -171,6 +219,20 @@ export default function InquirePage() {
               onSubmit={submit}
               className="mt-10 flex flex-col gap-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6"
             >
+              {session && (
+                <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-5 text-white/60">
+                  Your name, email, phone and address are filled in from your
+                  profile. Edit them here if this request is different, or{" "}
+                  <Link
+                    href="/profile"
+                    className="text-blue-400 underline underline-offset-2"
+                  >
+                    update your profile
+                  </Link>{" "}
+                  to change the defaults.
+                </p>
+              )}
+
               {/* Project Type */}
               <div>
                 <Label className="text-white">Project type</Label>
@@ -216,6 +278,22 @@ export default function InquirePage() {
                 />
               </div>
 
+              <div>
+                <Label htmlFor="customerName" className="text-white">
+                  Full name
+                </Label>
+                <Input
+                  id="customerName"
+                  name="customerName"
+                  value={fields.customerName}
+                  onChange={(event) =>
+                    setField("customerName", event.target.value)
+                  }
+                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                  placeholder="Your full name"
+                />
+              </div>
+
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <Label htmlFor="customerEmail" className="text-white">
@@ -225,8 +303,10 @@ export default function InquirePage() {
                     id="customerEmail"
                     name="customerEmail"
                     type="email"
-                    key={session?.email ?? "no-session"}
-                    defaultValue={session?.email ?? ""}
+                    value={fields.customerEmail}
+                    onChange={(event) =>
+                      setField("customerEmail", event.target.value)
+                    }
                     className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
                     placeholder="you@example.com"
                   />
@@ -239,6 +319,10 @@ export default function InquirePage() {
                   <Input
                     id="customerPhone"
                     name="customerPhone"
+                    value={fields.customerPhone}
+                    onChange={(event) =>
+                      setField("customerPhone", event.target.value)
+                    }
                     className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
                     placeholder="+63 917 000 0000"
                   />
@@ -255,9 +339,32 @@ export default function InquirePage() {
                   id="location"
                   name="location"
                   required
+                  value={fields.location}
+                  onChange={(event) => setField("location", event.target.value)}
                   className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
                   placeholder="Example: Cebu City"
                 />
+
+                {addresses.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-white/50">
+                      Saved addresses:
+                    </span>
+                    {addresses.map((address) => (
+                      <button
+                        key={address.id}
+                        type="button"
+                        onClick={() =>
+                          setField("location", formatAddress(address))
+                        }
+                        className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80 transition hover:bg-white/15"
+                      >
+                        {address.label}
+                        {address.city ? ` · ${address.city}` : ""}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Materials */}

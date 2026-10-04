@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CheckCircle2, ClipboardList, MapPin, Package } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,18 +18,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { useSession } from "@/lib/auth-store";
 import {
-  confirmCustomerOrder,
   getQuotationById,
+  requestQuotationChanges,
   useQuotations,
 } from "@/lib/quotations-store";
 import { createOrderFromQuotation } from "@/lib/orders-store";
 import { addNotification } from "@/lib/notifications-store";
 import { useAddresses } from "@/lib/addresses-store";
-import { updateOrder } from "@/lib/orders-store";
 import { addTransaction } from "@/lib/transactions-store";
 
 export default function OrderConfirmationPage() {
   const params = useParams<{ quotationId: string }>();
+  const router = useRouter();
 
   const session = useSession();
 
@@ -47,6 +48,10 @@ export default function OrderConfirmationPage() {
   const [deliveryMethod, setDeliveryMethod] = React.useState("Delivery");
   const [paymentMethod, setPaymentMethod] = React.useState("Cash on delivery");
   const [completed, setCompleted] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [showChangeRequest, setShowChangeRequest] = React.useState(false);
+  const [changeRequest, setChangeRequest] = React.useState("");
+  const [requestingChanges, setRequestingChanges] = React.useState(false);
 
   // --------------------------------------------------
   // CHECK 1: USER MUST BE SIGNED IN
@@ -87,6 +92,11 @@ export default function OrderConfirmationPage() {
    */
   const currentSession = session;
   const currentQuotation = quotation;
+  const preferredAddressId =
+    userAddresses.find((address) => address.isDefault)?.id ??
+    userAddresses[0]?.id ??
+    "";
+  const deliveryAddressId = selectedAddress || preferredAddressId;
 
   // --------------------------------------------------
   // CHECK 3: ONLY THE CUSTOMER WHO REQUESTED IT
@@ -126,36 +136,64 @@ export default function OrderConfirmationPage() {
   // CUSTOMER CONFIRMS THE ORDER
   // --------------------------------------------------
   async function handleConfirmOrder() {
-    /*
-     * Create the order from the confirmed quotation.
-     *
-     * currentQuotation is guaranteed not to be null.
-     */
-    const order = await createOrderFromQuotation(currentQuotation);
+    setSubmitting(true);
+    try {
+      const order = await createOrderFromQuotation(currentQuotation, {
+        deliveryMethod,
+        deliveryAddressId: deliveryAddressId || undefined,
+        paymentMethod,
+      });
+      addTransaction({
+        orderId: order.id,
+        accountId: currentSession.id,
+        type: "ORDER_CONFIRMED",
+        status: "Confirmed",
+        title: "Customer confirmed order",
+        message: `${currentSession.name} confirmed the order for ${currentQuotation.projectName}.`,
+        metadata: { deliveryMethod, paymentMethod, deliveryAddressId: deliveryAddressId || null },
+      });
+      addNotification({
+        audience: "staff",
+        title: "Customer confirmed an order",
+        body: `${currentSession.name} confirmed the quotation for "${currentQuotation.projectName}". The order and delivery receipt were created.`,
+        href: "/staff/orders",
+      });
+      setCompleted(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not confirm this quotation.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-    updateOrder(order.id, { deliveryMethod, deliveryAddressId: selectedAddress || undefined, paymentMethod });
-    void addTransaction({ orderId: order.id, accountId: currentSession.id, type: "ORDER_CONFIRMED", status: "Confirmed", title: "Customer confirmed order", message: `${currentSession.name} confirmed the order for ${currentQuotation.projectName}.`, metadata: { deliveryMethod, paymentMethod, deliveryAddressId: selectedAddress || null } });
-
-    /*
-     * Save the customer's confirmation and connect
-     * the created order to the quotation.
-     *
-     * Your orders store can automatically create the
-     * delivery receipt during createOrderFromQuotation().
-     */
-    confirmCustomerOrder(currentQuotation.id, order.id);
-
-    /*
-     * Notify staff that the customer has confirmed.
-     */
-    addNotification({
-      audience: "staff",
-      title: "Customer confirmed an order",
-      body: `${currentSession.name} confirmed the order for "${currentQuotation.projectName}". The order and delivery receipt were created automatically.`,
-      href: "/staff/orders",
-    });
-
-    setCompleted(true);
+  async function handleRequestChanges() {
+    const message = changeRequest.trim();
+    if (!message) {
+      toast.error("Describe what you would like changed.");
+      return;
+    }
+    setRequestingChanges(true);
+    try {
+      await requestQuotationChanges(currentQuotation.id, message);
+      addNotification({
+        audience: "staff",
+        title: "Customer requested quotation changes",
+        body: `${currentSession.name} requested changes to "${currentQuotation.projectName}".`,
+        href: "/staff/quotations",
+      });
+      addNotification({
+        audience: "admin",
+        title: "Customer requested quotation changes",
+        body: `${currentSession.name} requested changes to "${currentQuotation.projectName}".`,
+        href: "/staff/quotations",
+      });
+      toast.success("Your change request was sent to staff.");
+      router.push("/profile?tab=quotations");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send your change request.");
+    } finally {
+      setRequestingChanges(false);
+    }
   }
 
   // --------------------------------------------------
@@ -192,7 +230,7 @@ export default function OrderConfirmationPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-20">
       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-        Confirm order
+        Review quotation
       </p>
 
       <h1 className="mt-4 text-4xl font-semibold tracking-tight">
@@ -200,7 +238,7 @@ export default function OrderConfirmationPage() {
       </h1>
 
       <p className="mt-3 text-muted-foreground">
-        Please review the confirmed quotation before creating your order.
+        Review the final details. An order is created only after you confirm this quotation.
       </p>
 
       <Card className="mt-8">
@@ -285,7 +323,7 @@ export default function OrderConfirmationPage() {
               {userAddresses.length === 0 ? (
                 <p className="mt-2 text-sm text-muted-foreground">No saved address yet. Add one from your Profile & activity page before confirming a delivery order.</p>
               ) : (
-                <select className="mt-3 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm" required value={selectedAddress} onChange={(e) => setSelectedAddress(e.target.value)}>
+                <select className="mt-3 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm" required value={deliveryAddressId} onChange={(e) => setSelectedAddress(e.target.value)}>
                   <option value="">Select an address</option>
                   {userAddresses.map((address) => <option key={address.id} value={address.id}>{address.label} — {address.line1}, {address.city ?? ""}</option>)}
                 </select>
@@ -294,10 +332,39 @@ export default function OrderConfirmationPage() {
           )}
 
           {/* CONFIRM BUTTON */}
-          <Button size="lg" onClick={handleConfirmOrder} disabled={deliveryMethod === "Delivery" && (!userAddresses.length || !selectedAddress)}>
-            <CheckCircle2 className="size-4" />
-            Confirm order
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button size="lg" onClick={handleConfirmOrder} disabled={submitting || requestingChanges || (deliveryMethod === "Delivery" && !deliveryAddressId)}>
+              <CheckCircle2 className="size-4" />
+              {submitting ? "Confirming…" : "Confirm quotation and place order"}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              disabled={submitting || requestingChanges}
+              onClick={() => setShowChangeRequest((shown) => !shown)}
+            >
+              Request changes
+            </Button>
+          </div>
+          {showChangeRequest && (
+            <div className="space-y-2 rounded-xl border border-border p-4">
+              <label htmlFor="quotation-change-request" className="text-sm font-medium">
+                What would you like changed or added?
+              </label>
+              <textarea
+                id="quotation-change-request"
+                className="min-h-24 w-full rounded-xl border border-input bg-background p-3 text-sm"
+                value={changeRequest}
+                onChange={(event) => setChangeRequest(event.target.value)}
+                placeholder="Describe changes to materials, quantities, timeline, or other quotation details."
+              />
+              <div className="flex justify-end">
+                <Button onClick={() => void handleRequestChanges()} disabled={requestingChanges || submitting}>
+                  {requestingChanges ? "Sending…" : "Send change request"}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

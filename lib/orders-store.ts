@@ -2,8 +2,8 @@
 import {
   createRecord,
   deleteRecord,
-  getCollection,
   makeId,
+  refreshCollection,
   updateRecord,
   useDbCollection,
   apiRequest,
@@ -38,48 +38,17 @@ export type Order = {
 export function useOrders() {
   return useDbCollection<Order>("orders");
 }
-export async function createOrderFromQuotation(q: {
-  id: string;
-  inquiryId?: string;
-  clientId?: string;
-  accountId?: string;
-  projectName: string;
-  customerName?: string;
-  materials: string;
-  quantity: string;
+export async function createOrderFromQuotation(q: { id: string }, options: {
+  deliveryMethod: string;
+  deliveryAddressId?: string;
+  paymentMethod: string;
 }) {
-  const existing = getCollection<Order>("orders").find(
-    (o) => o.quotationId === q.id,
-  );
-  if (existing) return existing;
-  const now = new Date().toISOString();
-  const order: Order = {
-    id: makeId("order"),
+  const saved = await apiRequest<Order>("confirm_quotation_order", undefined, {
     quotationId: q.id,
-    inquiryId: q.inquiryId,
-    clientId: q.clientId,
-    accountId: q.accountId,
-    projectName: q.projectName,
-    clientName: q.customerName || "Customer",
-    materials: q.materials,
-    quantity: q.quantity,
-    status: "Confirmed",
-    createdAt: now,
-    confirmedAt: now,
-  };
-  const saved = await createRecord("orders", order);
-  await apiRequest("create", "transactions", {
-    record: {
-      id: makeId("tx"),
-      orderId: saved.id,
-      accountId: saved.accountId,
-      type: "ORDER_CREATED",
-      status: "Confirmed",
-      title: "Order confirmed",
-      message: `${saved.clientName} confirmed ${saved.projectName}.`,
-    },
+    ...options,
   });
-  return saved;
+  const rows = await refreshCollection<Order>("orders");
+  return rows.find((order) => order.id === saved.id) ?? saved;
 }
 export function updateOrder(id: string, patch: Partial<Order>) {
   void updateRecord("orders", id, patch);

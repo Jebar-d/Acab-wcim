@@ -19,3 +19,6 @@ C:\xampp\htdocs\acab-wcim-api\ rather than creating another nested api folder.
 
 Make sure Apache and MySQL are running in XAMPP and that the database
 acab_wcim has been imported into phpMyAdmin.
+
+For an existing database, apply database/migrations/20261004_quote_customer_confirmation.sql
+before deploying the quotation customer-confirmation workflow. It is safe to reapply.
