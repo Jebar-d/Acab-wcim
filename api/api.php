@@ -193,7 +193,7 @@ if ($action==='order_edit_submit') {
       $seen[$mid]=true;
       $imageColumn=materialImageColumn($pdo);
       $m=$pdo->prepare("SELECT id,sku,name,category,unit,quantity,status,`$imageColumn` AS material_image_url FROM materials WHERE id=?"); $m->execute([$mid]); $material=$m->fetch();
-      if (!$material || $material['status']==='Unavailable' || $qty>(float)$material['quantity']) { $pdo->rollBack(); jsonResponse(false,null,'Requested quantity exceeds current inventory availability.',422); }
+      if (!$material) { $pdo->rollBack(); jsonResponse(false,null,'One of the selected materials no longer exists in inventory.',422); }
       $clean[]=['materialId'=>$material['id'],'sku'=>$material['sku'],'materialName'=>$material['name'],'category'=>$material['category'],'imageUrl'=>$material['material_image_url'],'quantity'=>$qty,'unit'=>$material['unit']];
     }
     $previous=json_decode($order['materials'],true); if (!is_array($previous)) $previous=[];
@@ -211,12 +211,12 @@ if ($action==='order_edit_submit') {
     $insert->execute([$id,$orderId,$actor['id'],json_encode($clean),json_encode($previous),$order['status'],now()]);
     $pendingOrder=$pdo->prepare("UPDATE orders SET status='EDIT_REQUESTED',updated_at=? WHERE id=?"); $pendingOrder->execute([now(),$orderId]);
     $quoteId=(string)($order['quotation_id']??'');
-    $reference=$quoteId ? 'Quotation #'.substr($quoteId,0,8) : 'Order #'.substr($orderId,0,8);
-    $message="{$actor['name']} edited {$reference}.\n".implode("\n",$changeLines);
+    $reference='Order #'.substr($orderId,0,8);
+    $message="{$actor['name']} has submitted changes for {$reference}.\n".implode("\n",$changeLines);
     $notice=$pdo->prepare('INSERT INTO notifications (id,audience,title,body,created_at,href) VALUES (?,?,?,?,?,?)');
-    foreach (['staff','admin'] as $audience) $notice->execute([cleanId(),$audience,'Order edit request',$message,now(),$audience==='staff'?'/staff/orders?editRequestId='.$id:'/dashboard']);
+    foreach (['staff','admin'] as $audience) $notice->execute([cleanId(),$audience,'New Order Change Request',$message,now(),$audience==='staff'?'/staff/orders?editRequestId='.$id:'/dashboard']);
     $pdo->commit(); jsonResponse(true,['id'=>$id,'status'=>'PENDING','changes'=>$changeLines]);
-  } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+  } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); error_log($e->__toString()); jsonResponse(false,null,'Could not submit the change request. Please try again.',500); }
 }
 
 if ($action==='order_edit_review') {
@@ -229,17 +229,17 @@ if ($action==='order_edit_review') {
     if ($decision==='approve') {
       if ($request['order_status']!=='EDIT_REQUESTED') { $pdo->rollBack(); jsonResponse(false,null,'The order can no longer be updated.',422); }
       $items=json_decode($request['requested_items'],true); if (!is_array($items)||!count($items)) { $pdo->rollBack(); jsonResponse(false,null,'The requested items are invalid.',422); }
-      foreach ($items as $item) { $m=$pdo->prepare('SELECT quantity,status FROM materials WHERE id=? FOR UPDATE'); $m->execute([(string)($item['materialId']??'')]); $stock=$m->fetch(); if (!$stock || $stock['status']==='Unavailable' || (float)($item['quantity']??0)>(float)$stock['quantity']) { $available=$stock?(float)$stock['quantity']:0; $pdo->rollBack(); jsonResponse(false,null,"Unable to approve: only $available units are currently available.",422); } }
+      foreach ($items as $item) { $m=$pdo->prepare('SELECT quantity,status FROM materials WHERE id=? FOR UPDATE'); $m->execute([(string)($item['materialId']??'')]); $stock=$m->fetch(); if (!$stock || $stock['status']==='Unavailable' || (float)($item['quantity']??0)<=0 || (float)($item['quantity']??0)>(float)$stock['quantity']) { $available=$stock?(float)$stock['quantity']:0; $pdo->rollBack(); jsonResponse(false,null,"Unable to approve: only $available units are currently available.",422); } }
       $quantity=implode(', ',array_map(fn($i)=>$i['quantity'].' '.$i['unit'],$items)); $u=$pdo->prepare('UPDATE orders SET materials=?,quantity=?,status=\'APPROVED\',updated_at=? WHERE id=?'); $u->execute([json_encode($items),$quantity,now(),$request['order_id']]);
       $q=$pdo->prepare('UPDATE quotations SET materials=?,quantity=?,updated_at=? WHERE order_id=?'); $q->execute([json_encode($items),$quantity,now(),$request['order_id']]);
-      $status='APPROVED'; $title='Edited quotation approved'; $body="Your edited order was approved by {$actor['name']}.";
-    } else { $status='REJECTED'; $restore=$pdo->prepare('UPDATE orders SET status=?,updated_at=? WHERE id=?'); $restore->execute([$request['previous_order_status'],now(),$request['order_id']]); $title='Order update rejected'; $body="Your requested order changes were rejected.".($reason?" Reason: $reason":''); }
+      $status='APPROVED'; $title='Changes Successfully Approved'; $body="Your requested changes for Order #".substr($request['order_id'],0,8)." were successfully approved by {$actor['name']}.";
+    } else { $status='REJECTED'; $restore=$pdo->prepare('UPDATE orders SET status=?,updated_at=? WHERE id=?'); $restore->execute([$request['previous_order_status'],now(),$request['order_id']]); $title='Changes Not Approved'; $body="Your requested changes for Order #".substr($request['order_id'],0,8)." could not be approved.".($reason?" Reason: $reason":''); }
     $u=$pdo->prepare('UPDATE order_edit_requests SET status=?,reviewed_at=?,reviewed_by=?,rejection_reason=? WHERE id=?'); $u->execute([$status,now(),$actor['id'],$decision==='reject'?$reason:null,$requestId]);
     $href=$pdo->prepare('SELECT quotation_id FROM orders WHERE id=?'); $href->execute([$request['order_id']]); $quotationId=(string)($href->fetchColumn()?:'');
-    if ($quotationId) { $reference='quotation #'.substr($quotationId,0,8); $body=str_replace('edited order','edited '.$reference,$body); $body=str_replace('order changes','changes to '.$reference,$body); }
+    if ($quotationId) $body.=' Quotation #'.substr($quotationId,0,8).'.';
     $n=$pdo->prepare('INSERT INTO notifications (id,audience,account_id,title,body,created_at,href) VALUES (?,?,?,?,?,?,?)'); $n->execute([cleanId(),'user',$request['account_id'],$title,$body,now(),$quotationId?'/order-confirmation/'.$quotationId:'/profile']);
     $pdo->commit(); jsonResponse(true,['id'=>$requestId,'status'=>$status]);
-  } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
+  } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); error_log($e->__toString()); jsonResponse(false,null,'Could not review this change request. Please try again.',500); }
 }
 if ($action==='order_edit_list') {
   requireRole($pdo,['staff','admin']);
@@ -247,9 +247,16 @@ if ($action==='order_edit_list') {
   foreach ($rows as &$row) { $row['requestedItems']=json_decode($row['requested_items'],true)?:[]; $row['previousItems']=json_decode($row['previous_items'],true)?:[]; unset($row['requested_items'],$row['previous_items']); }
   jsonResponse(true,$rows);
 }
+if ($action==='order_edit_customer_status') {
+  $actor=requireRole($pdo,['user']); $orderId=(string)($input['orderId']??'');
+  if ($orderId==='') jsonResponse(false,null,'Order id is required.',422);
+  $st=$pdo->prepare('SELECT id,status,requested_at,reviewed_at,rejection_reason FROM order_edit_requests WHERE order_id=? AND account_id=? ORDER BY requested_at DESC LIMIT 1');
+  $st->execute([$orderId,$actor['id']]); $request=$st->fetch();
+  jsonResponse(true,$request?:null);
+}
 
 $allowed = ['clients','materials','categories','suppliers','inquiries','quotations','orders','delivery_receipts','stock_in','stock_out','checklists','checklist_items','ledger_entries','notifications','transactions','addresses','accounts'];
-$entitylessActions=['transaction_status','confirm_stock_out','request_quotation_changes','confirm_quotation_order'];
+$entitylessActions=['transaction_status','confirm_stock_out','request_quotation_changes','confirm_quotation_order','quotation_validate_confirmation'];
 if (!in_array($action,$entitylessActions,true) && !in_array($entity,$allowed,true)) jsonResponse(false,null,'Unknown entity.',400);
 
 $current=sessionUser($pdo);

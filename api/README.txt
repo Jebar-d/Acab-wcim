@@ -22,3 +22,7 @@ acab_wcim has been imported into phpMyAdmin.
 
 For an existing database, apply database/migrations/20261004_quote_customer_confirmation.sql
 before deploying the quotation customer-confirmation workflow. It is safe to reapply.
+
+For the customer "Submit changes for review" workflow, apply
+database/migrations/20261005_order_edit_approval.sql to acab_wcim using phpMyAdmin's
+Import or SQL tab. It creates the order_edit_requests table and is safe to reapply.

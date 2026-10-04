@@ -24,6 +24,48 @@ export function shortAddress(address?: string | null): string {
   return parts.slice(-3).join(", ");
 }
 
+type ReceiptLine = { name: string; sku: string; quantity: string; description: string };
+
+function formatReceiptQuantity(quantity: unknown, unitValue: unknown): string {
+  if (quantity === undefined || quantity === null || String(quantity).trim() === "" || !Number.isFinite(Number(quantity))) return "";
+  const unit = String(unitValue ?? "").trim();
+  if (!unit) return String(quantity);
+  const amount = Number(quantity);
+  const pluralUnit = amount === 1 || /s$/i.test(unit)
+    ? unit
+    : /(?:s|x|z|ch|sh)$/i.test(unit)
+      ? `${unit}es`
+      : /[^aeiou]y$/i.test(unit)
+        ? `${unit.slice(0, -1)}ies`
+        : `${unit}s`;
+  return `${quantity} ${pluralUnit}`;
+}
+
+function parseReceiptItems(items: string, defaultSku: string, totalQuantity: number): ReceiptLine[] {
+  try {
+    const parsed: unknown = JSON.parse(items);
+    const values: unknown[] = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed] : [];
+    const rows = values.flatMap((value): ReceiptLine[] => {
+      if (!value || typeof value !== "object") return [];
+      const item = value as Record<string, unknown>;
+      const name = String(item.materialName ?? item.name ?? item.material ?? "").trim();
+      if (!name) return [];
+      const rawQuantity = item.quantity;
+      const quantity = formatReceiptQuantity(rawQuantity, item.unit);
+      return [{ name, sku: String(item.sku ?? defaultSku ?? "").trim(), quantity, description: [name, quantity].filter(Boolean).join(" ") }];
+    });
+    if (rows.length) return rows;
+  } catch {
+    // Older receipts store a plain comma/newline separated item description.
+  }
+
+  const names = items.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
+  return names.map((name) => {
+    const quantity = names.length === 1 && totalQuantity ? String(totalQuantity) : "";
+    return { name, sku: defaultSku || "", quantity, description: [name, quantity].filter(Boolean).join(" ") };
+  });
+}
+
 function formatReceiptDate(date: string) {
   const parsed = new Date(date.length <= 10 ? `${date}T00:00:00` : date);
   return Number.isNaN(parsed.getTime())
@@ -94,10 +136,7 @@ export function DeliveryReceiptDocument({
   receipt: DeliveryReceipt;
   innerRef?: React.Ref<HTMLDivElement>;
 }) {
-  const lines = receipt.items
-    .split(/[,\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const lines = parseReceiptItems(receipt.items, receipt.sku, receipt.quantity);
   const stampClass =
     receipt.status === "Delivered"
       ? ""
@@ -158,21 +197,15 @@ export function DeliveryReceiptDocument({
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>
-              <ul className="dr-items">
-                {lines.length ? (
-                  lines.map((line, index) => (
-                    <li key={`${line}-${index}`}>{line}</li>
-                  ))
-                ) : (
-                  <li>—</li>
-                )}
-              </ul>
-            </td>
-            <td>{receipt.sku || "—"}</td>
-            <td className="dr-num">{receipt.quantity}</td>
-          </tr>
+          {lines.length ? lines.map((line, index) => (
+            <tr key={`${line.name}-${line.sku}-${index}`}>
+              <td>{line.description}</td>
+              <td>{line.sku || "-"}</td>
+              <td className="dr-num">{line.quantity || "-"}</td>
+            </tr>
+          )) : (
+            <tr><td>-</td><td>{receipt.sku || "-"}</td><td className="dr-num">{receipt.quantity}</td></tr>
+          )}
           <tr className="dr-total">
             <td colSpan={2}>Total quantity</td>
             <td className="dr-num">{receipt.quantity}</td>
