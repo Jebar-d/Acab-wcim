@@ -13,6 +13,8 @@ import {
   deleteDeliveryReceipt,
   useDeliveryReceipts,
 } from "@/lib/delivery-receipts-store";
+import { parseQuotationItems } from "@/lib/quotations-store";
+import { formatUnitPrice } from "@/lib/money";
 
 const STATUS_VARIANT = {
   Draft: "outline",
@@ -37,6 +39,7 @@ export default function DeliveryReceiptsPage() {
           items: v.items,
           sku: v.sku,
           quantity: Number(v.quantity) || 0,
+          totalAmount: Number(v.totalAmount) || 0,
           date: v.date || new Date().toISOString().slice(0, 10),
           releasedBy: v.releasedBy,
           status: "Draft",
@@ -52,6 +55,7 @@ export default function DeliveryReceiptsPage() {
           items: v.items,
           sku: v.sku,
           quantity: Number(v.quantity) || 0,
+          totalAmount: Number(v.totalAmount) || 0,
           releasedBy: v.releasedBy,
           date: v.date,
         })
@@ -72,6 +76,7 @@ export default function DeliveryReceiptsPage() {
           type: "number",
           placeholder: "50",
         },
+        { key: "totalAmount", label: "Receipt total (PHP)", type: "number", placeholder: "0.00", defaultValue: "0" },
         { key: "releasedBy", label: "Released by", placeholder: "Jamie Cruz" },
         { key: "date", label: "Date", type: "date" },
       ]}
@@ -79,8 +84,9 @@ export default function DeliveryReceiptsPage() {
         { key: "drNumber", label: "Receipt" },
         { key: "orderNumber", label: "Order #" },
         { key: "client", label: "Client" },
-        { key: "items", label: "Items" },
+        { key: "items", label: "Items", render: (r) => parseQuotationItems(r.items).map((item) => item.materialName + " (" + item.quantity + " " + item.unit + ")").join(", ") || r.items },
         { key: "quantity", label: "Qty" },
+        { key: "totalAmount", label: "Total", render: (r) => formatUnitPrice(r.totalAmount) },
         {
           key: "deliveryAddress",
           label: "Deliver to",

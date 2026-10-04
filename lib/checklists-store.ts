@@ -11,6 +11,7 @@ import {
 import type { Material } from "@/lib/materials-store";
 import {
   isOpenQuotationStatus,
+  parseQuotationItems,
   updateQuotation,
   type Quotation,
 } from "@/lib/quotations-store";
@@ -205,6 +206,31 @@ function buildItems(
   quotation: Quotation,
   materials: Material[],
 ): ChecklistItem[] {
+  const quotationItems = parseQuotationItems(quotation.materials);
+  if (quotationItems.length > 0) {
+    const materialItems: ChecklistItem[] = quotationItems.map((item) => {
+      const match = materials.find((material) => material.id === item.materialId)
+        ?? materials.find((material) => item.sku && material.sku.toLowerCase() === item.sku.toLowerCase())
+        ?? matchMaterial(item.materialName, materials);
+      return {
+        id: makeId("checkitem"),
+        kind: "material",
+        text: `Check stock: ${item.materialName}`,
+        materialName: item.materialName,
+        requested: `${item.quantity} ${item.unit}`,
+        materialId: match?.id ?? null,
+        completed: false,
+      };
+    });
+    const generalItems = GENERAL_CHECKS.map((text) => ({
+      id: makeId("checkitem"),
+      kind: "general" as const,
+      text,
+      completed: false,
+    }));
+    return [...materialItems, ...generalItems];
+  }
+
   const names = parseMaterialList(quotation.materials);
   const quantities = parseQuantityList(quotation.quantity);
   const aligned = quantities.length === names.length;
@@ -255,7 +281,45 @@ export async function ensureChecklistForQuotation(
     const rows = await refreshCollection<Checklist>("checklists");
     existing = rows.find((c) => c.quotationId === quotation.id) ?? null;
   }
-  if (existing) return existing;
+  if (existing) {
+    const quoteItems = parseQuotationItems(quotation.materials);
+    if (quoteItems.length > 0) {
+      const actualNames = existing.items
+        .filter((item) => item.kind === "material")
+        .map((item) => (item.materialName ?? "").trim().toLowerCase())
+        .sort();
+      const expectedNames = quoteItems.map((item) => item.materialName.trim().toLowerCase()).sort();
+      const checklistMatches = actualNames.length === expectedNames.length
+        && expectedNames.every((name, index) => actualNames[index] === name);
+      if (!checklistMatches) {
+        const materials = knownMaterials.length > 0
+          ? knownMaterials
+          : await refreshCollection<Material>("materials");
+        const repaired: Checklist = {
+          ...existing,
+          title: `${quotation.projectName || "Project"} — Material Review`,
+          status: "Checklist Pending",
+          items: buildItems(quotation, materials),
+        };
+        await updateRecord("checklists", existing.id, {
+          title: repaired.title,
+          status: repaired.status,
+          items: repaired.items,
+        } as Partial<Checklist>);
+        if (!quotation.customerConfirmedAt && !quotation.orderId) {
+          await updateQuotation(quotation.id, {
+            status: "checklist-pending",
+            checklistStatus: "Checklist Pending",
+            confirmedAt: null,
+            confirmationSentAt: null,
+            inventoryStatus: summarizeInventory(repaired.items, materials),
+          });
+        }
+        return repaired;
+      }
+    }
+    return existing;
+  }
 
   const materials =
     knownMaterials.length > 0

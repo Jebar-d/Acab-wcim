@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { DeliveryReceipt } from "@/lib/delivery-receipts-store";
+import { formatUnitPrice } from "@/lib/money";
+import { parseQuotationItems } from "@/lib/quotations-store";
 
 /** "DEN GEBHARD, 100 San Ricardo St, ..., Pinagbuhatan, Pasig, Metro manila, 1602" -> "Pinagbuhatan, Pasig, Metro manila" */
 export function shortAddress(address?: string | null): string {
@@ -24,7 +26,7 @@ export function shortAddress(address?: string | null): string {
   return parts.slice(-3).join(", ");
 }
 
-type ReceiptLine = { name: string; sku: string; quantity: string; description: string };
+type ReceiptLine = { name: string; sku: string; quantity: string; description: string; price?: number; subtotal?: number };
 
 function formatReceiptQuantity(quantity: unknown, unitValue: unknown): string {
   if (quantity === undefined || quantity === null || String(quantity).trim() === "" || !Number.isFinite(Number(quantity))) return "";
@@ -42,6 +44,20 @@ function formatReceiptQuantity(quantity: unknown, unitValue: unknown): string {
 }
 
 function parseReceiptItems(items: string, defaultSku: string, totalQuantity: number): ReceiptLine[] {
+  const quotationItems = parseQuotationItems(items);
+  if (quotationItems.length) {
+    return quotationItems.map((item) => {
+      const quantity = formatReceiptQuantity(item.quantity, item.unit);
+      return {
+        name: item.materialName,
+        sku: item.sku || defaultSku || "",
+        quantity,
+        description: [item.materialName, quantity].filter(Boolean).join(" "),
+        price: item.price,
+        subtotal: item.subtotal,
+      };
+    });
+  }
   try {
     const parsed: unknown = JSON.parse(items);
     const values: unknown[] = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed] : [];
@@ -52,7 +68,9 @@ function parseReceiptItems(items: string, defaultSku: string, totalQuantity: num
       if (!name) return [];
       const rawQuantity = item.quantity;
       const quantity = formatReceiptQuantity(rawQuantity, item.unit);
-      return [{ name, sku: String(item.sku ?? defaultSku ?? "").trim(), quantity, description: [name, quantity].filter(Boolean).join(" ") }];
+      const price = Number(item.price);
+      const subtotal = Number(item.subtotal);
+      return [{ name, sku: String(item.sku ?? defaultSku ?? "").trim(), quantity, description: [name, quantity].filter(Boolean).join(" "), ...(Number.isFinite(price) ? { price } : {}), ...(Number.isFinite(subtotal) ? { subtotal } : {}) }];
     });
     if (rows.length) return rows;
   } catch {
@@ -194,6 +212,8 @@ export function DeliveryReceiptDocument({
             <th>Description</th>
             <th>SKU</th>
             <th className="dr-num">Qty</th>
+            <th className="dr-num">Unit price</th>
+            <th className="dr-num">Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -202,13 +222,17 @@ export function DeliveryReceiptDocument({
               <td>{line.description}</td>
               <td>{line.sku || "-"}</td>
               <td className="dr-num">{line.quantity || "-"}</td>
+              <td className="dr-num">{line.price === undefined ? "-" : formatUnitPrice(line.price)}</td>
+              <td className="dr-num">{line.subtotal === undefined ? "-" : formatUnitPrice(line.subtotal)}</td>
             </tr>
           )) : (
-            <tr><td>-</td><td>{receipt.sku || "-"}</td><td className="dr-num">{receipt.quantity}</td></tr>
+            <tr><td>-</td><td>{receipt.sku || "-"}</td><td className="dr-num">{receipt.quantity}</td><td className="dr-num">-</td><td className="dr-num">-</td></tr>
           )}
           <tr className="dr-total">
             <td colSpan={2}>Total quantity</td>
             <td className="dr-num">{receipt.quantity}</td>
+            <td className="dr-num">Total</td>
+            <td className="dr-num">{formatUnitPrice(receipt.totalAmount)}</td>
           </tr>
         </tbody>
       </table>

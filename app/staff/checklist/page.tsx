@@ -44,6 +44,7 @@ import {
 } from "@/lib/checklists-store";
 import { useMaterials, type Material } from "@/lib/materials-store";
 import { useQuotations } from "@/lib/quotations-store";
+import { parseQuotationItems } from "@/lib/quotations-store";
 
 const STOCK_LABEL: Record<StockState, string> = {
   ok: "In stock",
@@ -368,7 +369,7 @@ function ChecklistView() {
             </CardTitle>
             <CardDescription>
               {quotation
-                ? `${quotation.customerName ?? "Customer"} · ${quotation.materials} · ${quotation.quantity}`
+                ? [quotation.customerName ?? "Customer", parseQuotationItems(quotation.materials).map((item) => item.materialName + " (" + item.quantity + " " + item.unit + ")").join(", ") || quotation.materials, quotation.quantity].join(" · ")
                 : "Loading quotation…"}
             </CardDescription>
           </CardHeader>

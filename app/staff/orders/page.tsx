@@ -14,6 +14,8 @@ import { useMaterials } from "@/lib/materials-store";
 import { ImageOff } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { parseQuotationItems } from "@/lib/quotations-store";
+import { formatUnitPrice } from "@/lib/money";
 
 type EditItem={materialId:string;sku?:string;materialName:string;imageUrl?:string|null;quantity:number;unit:string};
 type EditRequest={id:string;order_id:string;quotation_id?:string;customer_name:string;project_name:string;status:string;requested_at:string;reviewed_at?:string|null;reviewer_name?:string|null;rejection_reason?:string|null;requestedItems:EditItem[];previousItems:EditItem[]};
@@ -98,20 +100,22 @@ function OrdersContent() {
       addLabel="Add order"
       emptyLabel="No orders yet."
       data={visibleOrders}
-      onAdd={(v) => addOrder({ projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity })}
+      onAdd={(v) => addOrder({ projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity, totalAmount: Number(v.totalAmount) || 0 })}
       onDelete={deleteOrder}
-      onUpdate={(id, v) => updateOrder(id, { projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity })}
+      onUpdate={(id, v) => updateOrder(id, { projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity, totalAmount: Number(v.totalAmount) || 0 })}
       fields={[
         { key: "projectName", label: "Project name", placeholder: "Riverside Housing" },
         { key: "clientName", label: "Client", placeholder: "Maria Santos" },
         { key: "materials", label: "Materials", placeholder: "Cement, rebar" },
         { key: "quantity", label: "Quantity", placeholder: "50 bags" },
+        { key: "totalAmount", label: "Order total (PHP)", type: "number", placeholder: "0.00", defaultValue: "0" },
       ]}
       columns={[
         { key: "projectName", label: "Order" },
         { key: "clientName", label: "Client" },
-        { key: "materials", label: "Materials" },
+        { key: "materials", label: "Materials", render: (o) => parseQuotationItems(o.materials).map((item) => item.materialName + " (" + item.quantity + " " + item.unit + ")").join(", ") || o.materials },
         { key: "quantity", label: "Qty" },
+        { key: "totalAmount", label: "Total", render: (o) => formatUnitPrice(o.totalAmount) },
         { key: "status", label: "Status", render: (o) => <Badge variant={o.status === "Cancelled" ? "destructive" : "secondary"}>{o.status}</Badge> },
       ]}
       extra={(order) => (

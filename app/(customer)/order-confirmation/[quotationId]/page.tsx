@@ -26,8 +26,8 @@ import {
 import { createOrderFromQuotation, updateOrderStatus, useOrders } from "@/lib/orders-store";
 import { addNotification } from "@/lib/notifications-store";
 import { useAddresses } from "@/lib/addresses-store";
-import { addTransaction } from "@/lib/transactions-store";
 import { parseQuotationItems } from "@/lib/quotations-store";
+import { formatMoney } from "@/lib/money";
 import { useMaterials } from "@/lib/materials-store";
 import { apiRequest, resolveApiAssetUrl } from "@/lib/db-client";
 
@@ -184,15 +184,6 @@ export default function OrderConfirmationPage() {
         deliveryAddressId: deliveryAddressId || undefined,
         paymentMethod,
       });
-      void addTransaction({
-        orderId: order.id,
-        accountId: currentSession.id,
-        type: "ORDER_CONFIRMED",
-        status: "Confirmed",
-        title: "Customer confirmed order",
-        message: `${currentSession.name} confirmed the order for ${currentQuotation.projectName}.`,
-        metadata: { deliveryMethod, paymentMethod, deliveryAddressId: deliveryAddressId || null },
-      });
       addNotification({
         audience: "staff",
         title: "Customer confirmed an order",
@@ -269,7 +260,7 @@ export default function OrderConfirmationPage() {
               {(editRequestStatus?.status==="PENDING"||currentOrder?.status==="EDIT_REQUESTED")&&<div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm"><Badge variant="outline">Pending review</Badge><p className="mt-2 text-muted-foreground">Your original order is unchanged while staff reviews the requested updates.</p></div>}
               {(editRequestStatus?.status==="APPROVED"||currentOrder?.status==="APPROVED")&&<div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm"><Badge>Changes successfully approved</Badge><p className="mt-2 text-muted-foreground">Staff approved your requested changes.</p></div>}
               {editRequestStatus?.status==="REJECTED"&&<div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"><Badge variant="destructive">Changes rejected</Badge><p className="mt-2 text-muted-foreground">Staff could not approve the requested changes.{editRequestStatus.rejection_reason?` Reason: ${editRequestStatus.rejection_reason}`:""}</p></div>}
-              <div className="space-y-2"><p className="font-medium">{currentOrder?.status==="EDIT_REQUESTED"?"Original order":"Current approved order"}</p>{currentOrderItems.map((item)=><div key={item.materialId} className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm"><span>{item.materialName}</span><span className="shrink-0 text-muted-foreground">{item.quantity} {item.unit}</span></div>)}</div>
+              <div className="space-y-2"><p className="font-medium">{currentOrder?.status==="EDIT_REQUESTED"?"Original order":"Current approved order"}</p>{currentOrderItems.map((item)=>{const material=inventory.find((candidate)=>candidate.id===item.materialId);const price=item.price??material?.unitPrice??0;return <div key={item.materialId} className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm"><span>{item.materialName}<span className="block text-xs text-muted-foreground">{formatMoney(price)} / {item.unit}</span></span><span className="shrink-0 text-right text-muted-foreground">{item.quantity} {item.unit}<span className="block font-medium text-foreground">{formatMoney(item.subtotal??price*item.quantity)}</span></span></div>;})}<p className="flex justify-between border-t pt-3 font-semibold"><span>Order total</span><span>{formatMoney(currentOrder?.totalAmount || currentQuotation.totalAmount || currentOrderItems.reduce((sum,item)=>sum+(item.subtotal??(item.price??inventory.find((material)=>material.id===item.materialId)?.unitPrice??0)*item.quantity),0))}</span></p></div>
               <div className="flex flex-wrap justify-center gap-2"><Button variant="outline" disabled={!currentOrder||currentOrder.status==="EDIT_REQUESTED"} onClick={()=>{setEditItems(Object.fromEntries(currentOrderItems.map((item)=>[item.materialId,item.quantity])));setEditMode(true);}}>Edit order</Button>{currentOrder&&["Pending","Confirmed","APPROVED"].includes(currentOrder.status)&&<Button variant="outline" onClick={async()=>{if(!window.confirm("Cancel this order? This will notify the staff."))return;try{await updateOrderStatus(currentOrder.id,"Cancelled","Customer cancelled this order.");toast.success("Order cancelled.");}catch(error){toast.error(error instanceof Error?error.message:"Could not cancel this order.");}}}>Cancel order</Button>}<Button render={<Link href="/">Back to home</Link>} /></div>
             </>}
           </CardContent>
@@ -313,7 +304,7 @@ export default function OrderConfirmationPage() {
               <div>
                 <p className="font-medium">Materials</p>
 
-                {quotationItems.length ? <ul className="mt-2 space-y-2 text-sm text-muted-foreground">{quotationItems.map((item)=>{const imageUrl=item.imageUrl ?? inventory.find((material)=>material.id===item.materialId)?.imageUrl;return <li key={item.materialId} className="flex items-center justify-between gap-4"><span className="flex items-center gap-3"><span className="relative flex size-10 shrink-0 items-center justify-center rounded-md border">{imageUrl ? <img src={resolveApiAssetUrl(imageUrl)} alt={item.materialName} className="absolute inset-0 size-full rounded-md object-contain" onError={(event)=>{event.currentTarget.style.display="none";}} /> : <ImageOff className="size-4" aria-label="No image" />}</span>{item.materialName}{item.size ? ` · ${item.size}` : ""}{item.brand ? ` · ${item.brand}` : ""}</span><span>{item.quantity} {item.unit}</span></li>;})}</ul> : <p className="mt-1 text-sm text-muted-foreground">{currentQuotation.materials}</p>}
+                {quotationItems.length ? <ul className="mt-2 space-y-2 text-sm text-muted-foreground">{quotationItems.map((item)=>{const material=inventory.find((candidate)=>candidate.id===item.materialId);const imageUrl=item.imageUrl ?? material?.imageUrl;const price=item.price??material?.unitPrice??0;return <li key={item.materialId} className="flex items-center justify-between gap-4"><span className="flex items-center gap-3"><span className="relative flex size-10 shrink-0 items-center justify-center rounded-md border">{imageUrl ? <img src={resolveApiAssetUrl(imageUrl)} alt={item.materialName} className="absolute inset-0 size-full rounded-md object-contain" onError={(event)=>{event.currentTarget.style.display="none";}} /> : <ImageOff className="size-4" aria-label="No image" />}</span><span>{item.materialName}{item.size ? ` · ${item.size}` : ""}{item.brand ? ` · ${item.brand}` : ""}<span className="block text-xs">{formatMoney(price)} / {item.unit}</span></span></span><span className="text-right">{item.quantity} {item.unit}<span className="block font-medium text-foreground">{formatMoney(item.subtotal??price*item.quantity)}</span></span></li>;})}<li className="flex justify-between border-t pt-3 font-semibold text-foreground"><span>Quotation total</span><span>{formatMoney(currentQuotation.totalAmount || quotationItems.reduce((sum,item)=>sum+(item.subtotal??(item.price??inventory.find((material)=>material.id===item.materialId)?.unitPrice??0)*item.quantity),0))}</span></li></ul> : <p className="mt-1 text-sm text-muted-foreground">{currentQuotation.materials}</p>}
               </div>
             </div>
           </div>

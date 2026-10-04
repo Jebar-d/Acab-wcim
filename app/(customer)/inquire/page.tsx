@@ -16,6 +16,7 @@ import { formatAddress, useAddresses } from "@/lib/addresses-store";
 import { addNotification } from "@/lib/notifications-store";
 import { useMaterials } from "@/lib/materials-store";
 import type { QuotationItem } from "@/lib/quotations-store";
+import { formatUnitPrice } from "@/lib/money";
 import { resolveApiAssetUrl } from "@/lib/db-client";
 
 import { Button } from "@/components/ui/button";
@@ -128,7 +129,7 @@ export default function InquirePage() {
         toast.error(material && Number(invalidSelection[1]) > material.quantity ? `Only ${material.quantity} ${material.unit} are currently available.` : "Enter a quantity greater than zero for each selected material.");
         return;
       }
-      const items: QuotationItem[] = inventory.filter((material) => Number(selectedItems[material.id] ?? 0) > 0).map((material) => ({materialId: material.id, materialName: material.name, sku: material.sku, category: material.category, imageUrl: material.imageUrl, quantity: Number(selectedItems[material.id]), unit: material.unit}));
+      const items: QuotationItem[] = inventory.filter((material) => Number(selectedItems[material.id] ?? 0) > 0).map((material) => { const quantity=Number(selectedItems[material.id]); const price=Number(material.unitPrice)||0; return {materialId: material.id, materialName: material.name, sku: material.sku, category: material.category, imageUrl: material.imageUrl, quantity, unit: material.unit, price, subtotal: Math.round(quantity*price*100)/100}; });
       const materials = JSON.stringify(items);
       const timeline = String(data.get("timeline") ?? "").trim();
       const customerName = String(
@@ -425,7 +426,8 @@ export default function InquirePage() {
                             <span className="min-w-0"><span className="block truncate font-medium text-white">{material.name}</span><span className="mt-1 block truncate text-xs text-white/60">{material.category} · {material.sku}</span></span>
                             {selected && <Check className="size-5 shrink-0 text-blue-300" aria-label="Selected" />}
                           </span>
-                          <span className="mt-3 block text-sm text-white/70">Available: {material.quantity} {material.unit}</span>
+                          <span className="mt-3 block text-sm font-medium text-white">{formatUnitPrice(material.unitPrice)} / {material.unit}</span>
+                          <span className="mt-1 block text-sm text-white/70">Available: {material.quantity} {material.unit}</span>
                           <span className={`mt-2 block text-xs font-semibold ${availabilityClass}`}>{availability}</span>
                         </span>
                       </button>
@@ -444,11 +446,11 @@ export default function InquirePage() {
                   <div className="mt-3 space-y-3">
                     {selectedMaterials.map((material) => <div key={material.id} className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
                       <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]"><MaterialImage src={material.imageUrl} name={material.name} /></span>
-                      <span className="min-w-0 flex-1"><span className="block truncate font-medium text-white">{material.name}</span><span className="block text-xs text-white/60">{material.sku} · {selectedItems[material.id] || 0} {material.unit}</span></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate font-medium text-white">{material.name}</span><span className="block text-xs text-white/60">{material.sku} · {selectedItems[material.id] || 0} {material.unit} × {formatUnitPrice(material.unitPrice)} / {material.unit}</span><span className="block text-xs text-white/70">Line total: {formatUnitPrice((Number(selectedItems[material.id]) || 0) * (Number(material.unitPrice) || 0))}</span></span>
                       <Button type="button" variant="outline" size="sm" onClick={() => toggleMaterial(material.id)}>Remove</Button>
                     </div>)}
                   </div>
-                  <p className="mt-4 text-sm text-white/70">Total items: {selectedMaterials.length} · Total units: {selectedMaterials.reduce((sum, material) => sum + (Number(selectedItems[material.id]) || 0), 0)}</p>
+                  <p className="mt-4 flex justify-between gap-3 text-sm text-white/70"><span>Total items: {selectedMaterials.length} · Total units: {selectedMaterials.reduce((sum, material) => sum + (Number(selectedItems[material.id]) || 0), 0)}</span><span className="font-semibold text-white">{formatUnitPrice(selectedMaterials.reduce((sum, material) => sum + (Number(selectedItems[material.id]) || 0) * (Number(material.unitPrice) || 0), 0))}</span></p>
                 </div>}
               </div>
 

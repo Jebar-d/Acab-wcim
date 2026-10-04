@@ -72,6 +72,7 @@ export type Quotation = {
   orderId?: string | null;
   createdAt: string;
   expiresAt?: string | null;
+  totalAmount?: number;
   items?: QuotationItem[];
   cancelledAt?: string | null;
   cancelledBy?: string | null;
@@ -87,14 +88,43 @@ export function isOpenQuotationStatus(status?: string): boolean {
   );
 }
 
-export function parseQuotationItems(value?: string): QuotationItem[] {
-  if (!value) return [];
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return Array.isArray(parsed) ? (parsed as QuotationItem[]) : [];
-  } catch {
-    return [];
+export function parseQuotationItems(value?: string | unknown): QuotationItem[] {
+  let parsed: unknown = value;
+  // Older requests sometimes persisted the JSON array as a JSON string, so
+  // decode the value more than once before deciding it is legacy free text.
+  for (let attempt = 0; attempt < 3 && typeof parsed === "string"; attempt += 1) {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
   }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((value): QuotationItem[] => {
+    if (!value || typeof value !== "object") return [];
+    const item = value as Record<string, unknown>;
+    const materialId = String(item.materialId ?? item.id ?? "").trim();
+    const materialName = String(item.materialName ?? item.name ?? item.material ?? "").trim();
+    const quantity = Number(item.quantity);
+    if (!materialName || !Number.isFinite(quantity) || quantity <= 0) return [];
+    const price = Number(item.price);
+    const subtotal = Number(item.subtotal);
+    return [{
+      materialId,
+      materialName,
+      sku: typeof item.sku === "string" ? item.sku : undefined,
+      category: typeof item.category === "string" ? item.category : undefined,
+      imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
+      brand: typeof item.brand === "string" ? item.brand : undefined,
+      size: typeof item.size === "string" ? item.size : undefined,
+      color: typeof item.color === "string" ? item.color : undefined,
+      variant: typeof item.variant === "string" ? item.variant : undefined,
+      quantity,
+      unit: String(item.unit ?? "Piece"),
+      price: Number.isFinite(price) && price >= 0 ? price : undefined,
+      subtotal: Number.isFinite(subtotal) && subtotal >= 0 ? subtotal : undefined,
+    }];
+  });
 }
 
 export function useQuotations() {

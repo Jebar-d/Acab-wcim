@@ -48,6 +48,7 @@ import { parseQuotationItems } from "@/lib/quotations-store";
 import { resolveApiAssetUrl } from "@/lib/db-client";
 import { ImageOff } from "lucide-react";
 import { useSession } from "@/lib/auth-store";
+import { formatMoney, formatUnitPrice } from "@/lib/money";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -152,8 +153,13 @@ export default function QuotationsPage() {
     }
   }
 
-  function editValue(quotation: Quotation, key: "projectName" | "projectType" | "location" | "materials" | "quantity" | "timeline" | "notes") {
-    return quoteEdits[quotation.id]?.[key] ?? quotation[key] ?? "";
+  function editValue(quotation: Quotation, key: "projectName" | "projectType" | "location" | "materials" | "quantity" | "timeline" | "notes"): string {
+    const value = quoteEdits[quotation.id]?.[key] ?? quotation[key] ?? "";
+    if (key === "materials") {
+      const items = parseQuotationItems(value);
+      if (items.length) return items.map((item) => item.materialName).join(", ");
+    }
+    return String(value);
   }
 
   function handleReject(quotation: Quotation) {
@@ -203,7 +209,8 @@ export default function QuotationsPage() {
         )}
 
         {activeRequests.map((quotation) => {
-          const isDecided = ["confirmed", "rejected", "cancelled", "expired"].includes(quotation.status);
+          const isDecided = ["rejected", "cancelled", "expired"].includes(quotation.status)
+            || (quotation.status === "confirmed" && (!!quotation.customerConfirmedAt || !!quotation.orderId));
 
           const checklist = checklists.find(
             (c) => c.quotationId === quotation.id,
@@ -274,6 +281,8 @@ export default function QuotationsPage() {
                   <span className="text-muted-foreground">Materials: </span>
                   {parseQuotationItems(quotation.materials).length ? <ul className="mt-2 space-y-2">{parseQuotationItems(quotation.materials).map((item)=>{const imageUrl=item.imageUrl ?? materials.find((material)=>material.id===item.materialId)?.imageUrl;return <li key={item.materialId} className="flex items-center gap-3"><span className="relative flex size-10 shrink-0 items-center justify-center rounded-md border text-muted-foreground">{imageUrl ? <img src={resolveApiAssetUrl(imageUrl)} alt={item.materialName} className="absolute inset-0 size-full rounded-md object-contain" onError={(event)=>{event.currentTarget.style.display="none";}} /> : <ImageOff className="size-4" aria-label="No image" />}</span><span>{item.materialName} · {item.quantity} {item.unit}{item.size?` · ${item.size}`:""}{item.brand?` · ${item.brand}`:""}</span></li>;})}</ul> : quotation.materials}
                 </div>
+                {parseQuotationItems(quotation.materials).length > 0 && <div><p className="font-medium">Quotation total: {formatUnitPrice(quotation.totalAmount)}</p>{parseQuotationItems(quotation.materials).some((item) => !item.price || item.price <= 0) && <p className="mt-1 text-sm text-amber-600">Set a price for each material before approving this quotation.</p>}</div>}
+                {parseQuotationItems(quotation.materials).length > 0 && <p className="lg:col-span-2 text-xs text-muted-foreground">{parseQuotationItems(quotation.materials).map((item) => item.materialName + ": " + formatUnitPrice(item.price) + " / " + item.unit + " · Line total " + formatUnitPrice(item.subtotal)).join(" · ")}</p>}
                 <p>
                   <span className="text-muted-foreground">Quantity: </span>
                   {quotation.quantity}

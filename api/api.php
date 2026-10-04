@@ -105,15 +105,15 @@ function mapRow(string $entity, array $row): array {
       'id'=>$row['id'],'name'=>$row['name'],'email'=>$row['email'],'password'=>'','role'=>$row['role'],'employeeId'=>$row['employee_id'],
       'status'=>$row['status'],'phone'=>$row['phone']??null,'avatarUrl'=>$row['avatar_url']??null,'notificationEmail'=>(bool)($row['notification_email']??1),'createdAt'=>$row['created_at'],'reviewedBy'=>$row['reviewed_by'],'reviewedAt'=>$row['reviewed_at']
     ];
-    case 'materials': return ['id'=>$row['id'],'sku'=>$row['sku'],'name'=>$row['name'],'category'=>$row['category'],'unit'=>$row['unit'],'quantity'=>(float)$row['quantity'],'minimumStock'=>(float)$row['minimum_stock'],'status'=>$row['status'],'imageUrl'=>$row['img_url']??$row['image_url']??null,'createdAt'=>$row['created_at']];
+    case 'materials': return ['id'=>$row['id'],'sku'=>$row['sku'],'name'=>$row['name'],'category'=>$row['category'],'unit'=>$row['unit'],'quantity'=>(float)$row['quantity'],'minimumStock'=>(float)$row['minimum_stock'],'unitPrice'=>(float)($row['unit_price']??0),'status'=>$row['status'],'imageUrl'=>$row['img_url']??$row['image_url']??null,'createdAt'=>$row['created_at']];
     case 'categories': return ['id'=>$row['id'],'name'=>$row['name'],'description'=>$row['description'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'clients': return ['id'=>$row['id'],'accountId'=>$row['account_id'],'name'=>$row['name'],'email'=>$row['email'],'phone'=>$row['phone'],'company'=>$row['company'],'address'=>$row['address'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'suppliers': return ['id'=>$row['id'],'name'=>$row['name'],'contactName'=>$row['contact'],'phone'=>$row['phone'],'email'=>$row['email'],'address'=>$row['address'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'inquiries': return ['id'=>$row['id'],'accountId'=>$row['account_id'],'project'=>$row['project'],'projectType'=>$row['project_type'],'location'=>$row['location'],'materials'=>$row['materials'],'quantity'=>$row['quantity'],'timeline'=>$row['timeline'],'notes'=>$row['notes'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
-    case 'quotations': return ['id'=>$row['id'],'inquiryId'=>$row['inquiry_id'],'clientId'=>$row['client_id'],'accountId'=>$row['account_id'],'customerName'=>$row['customer_name'],'customerEmail'=>$row['customer_email']??null,'customerPhone'=>$row['customer_phone']??null,'projectName'=>$row['project_name'],'projectType'=>$row['project_type'],'location'=>$row['location'],'materials'=>$row['materials'],'quantity'=>$row['quantity'],'timeline'=>$row['timeline'],'notes'=>$row['notes'],'customerChangeRequest'=>$row['customer_change_request']??null,'status'=>$row['status'],'inventoryStatus'=>$row['inventory_status'],'checklistStatus'=>$row['checklist_status'],'confirmedAt'=>$row['confirmed_at'],'confirmationSentAt'=>$row['confirmation_sent_at'],'customerConfirmedAt'=>$row['customer_confirmed_at'],'orderId'=>$row['order_id'],'createdAt'=>$row['created_at'],'expiresAt'=>$row['expires_at']??null,'cancelledAt'=>$row['cancelled_at']??null,'cancelledBy'=>$row['cancelled_by']??null,'cancelReason'=>$row['cancel_reason']??null];
-    case 'orders': return ['id'=>$row['id'],'orderNo'=>$row['order_no']??null,'quotationId'=>$row['quotation_id'],'inquiryId'=>$row['inquiry_id'],'clientId'=>$row['client_id'],'accountId'=>$row['account_id'],'projectName'=>$row['project_name'],'clientName'=>$row['client_name'],'materials'=>$row['materials'],'quantity'=>$row['quantity'],'status'=>$row['status'],'deliveryMethod'=>$row['delivery_method'],'deliveryAddressId'=>$row['delivery_address_id'],'paymentMethod'=>$row['payment_method'],'notes'=>$row['notes'],'confirmedAt'=>$row['confirmed_at'],'createdAt'=>$row['created_at']];
+    case 'quotations': return ['id'=>$row['id'],'inquiryId'=>$row['inquiry_id'],'clientId'=>$row['client_id'],'accountId'=>$row['account_id'],'customerName'=>$row['customer_name'],'customerEmail'=>$row['customer_email']??null,'customerPhone'=>$row['customer_phone']??null,'projectName'=>$row['project_name'],'projectType'=>$row['project_type'],'location'=>$row['location'],'materials'=>$row['materials'],'quantity'=>$row['quantity'],'totalAmount'=>(float)($row['total_amount']??0),'timeline'=>$row['timeline'],'notes'=>$row['notes'],'customerChangeRequest'=>$row['customer_change_request']??null,'status'=>$row['status'],'inventoryStatus'=>$row['inventory_status'],'checklistStatus'=>$row['checklist_status'],'confirmedAt'=>$row['confirmed_at'],'confirmationSentAt'=>$row['confirmation_sent_at'],'customerConfirmedAt'=>$row['customer_confirmed_at'],'orderId'=>$row['order_id'],'createdAt'=>$row['created_at'],'expiresAt'=>$row['expires_at']??null,'cancelledAt'=>$row['cancelled_at']??null,'cancelledBy'=>$row['cancelled_by']??null,'cancelReason'=>$row['cancel_reason']??null];
+    case 'orders': return ['id'=>$row['id'],'orderNo'=>$row['order_no']??null,'quotationId'=>$row['quotation_id'],'inquiryId'=>$row['inquiry_id'],'clientId'=>$row['client_id'],'accountId'=>$row['account_id'],'projectName'=>$row['project_name'],'clientName'=>$row['client_name'],'materials'=>$row['materials'],'quantity'=>$row['quantity'],'totalAmount'=>(float)($row['total_amount']??0),'status'=>$row['status'],'deliveryMethod'=>$row['delivery_method'],'deliveryAddressId'=>$row['delivery_address_id'],'paymentMethod'=>$row['payment_method'],'notes'=>$row['notes'],'confirmedAt'=>$row['confirmed_at'],'createdAt'=>$row['created_at']];
     case 'purchase_orders': return ['id'=>$row['id'],'poNumber'=>$row['po_number'],'supplierId'=>$row['supplier_id'],'supplierName'=>$row['supplier_name'],'materialId'=>$row['material_id'],'material'=>$row['material'],'sku'=>$row['sku'],'quantity'=>(float)$row['quantity'],'unitCost'=>(float)$row['unit_cost'],'totalAmount'=>(float)$row['total_amount'],'orderDate'=>$row['order_date'],'expectedDate'=>$row['expected_date'],'receivedAt'=>$row['received_at'],'status'=>$row['status'],'notes'=>$row['notes'],'createdAt'=>$row['created_at']];
-    case 'delivery_receipts': return ['id'=>$row['id'],'drNumber'=>$row['dr_number'],'orderNumber'=>$row['order_number'],'orderId'=>$row['order_id']??null,'deliveryMethod'=>$row['delivery_method']??null,'deliveryAddress'=>$row['delivery_address']??null,'paymentMethod'=>$row['payment_method']??null,'client'=>$row['client'],'items'=>$row['items'],'sku'=>$row['sku'],'quantity'=>(float)$row['quantity'],'date'=>$row['date'],'releasedBy'=>$row['released_by'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
+    case 'delivery_receipts': return ['id'=>$row['id'],'drNumber'=>$row['dr_number'],'orderNumber'=>$row['order_number'],'orderId'=>$row['order_id']??null,'deliveryMethod'=>$row['delivery_method']??null,'deliveryAddress'=>$row['delivery_address']??null,'paymentMethod'=>$row['payment_method']??null,'client'=>$row['client'],'items'=>$row['items'],'sku'=>$row['sku'],'quantity'=>(float)$row['quantity'],'totalAmount'=>(float)($row['total_amount']??0),'date'=>$row['date'],'releasedBy'=>$row['released_by'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'stock_in': return ['id'=>$row['id'],'stockInId'=>$row['stock_in_id'],'reference'=>$row['stock_in_id'],'sku'=>$row['sku'],'material'=>$row['material'],'quantity'=>(float)$row['quantity'],'supplier'=>$row['supplier'],'receivedBy'=>$row['received_by'],'date'=>$row['date'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'stock_out': return ['id'=>$row['id'],'stockOutId'=>$row['stock_out_id'],'sku'=>$row['sku'],'material'=>$row['material'],'quantity'=>(float)$row['quantity'],'orderRef'=>$row['order_ref'],'destination'=>$row['destination'],'warehouseStaff'=>$row['warehouse_staff'],'date'=>$row['date'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'checklists': return ['id'=>$row['id'],'quotationId'=>$row['quotation_id']??null,'title'=>$row['title'],'status'=>$row['status'],'items'=>$row['items_json']?json_decode($row['items_json'],true):[],'createdAt'=>$row['created_at']];
@@ -171,9 +171,9 @@ if ($action==='quotation_validate_confirmation') {
   $actor=requireRole($pdo,['user']); $id=(string)($input['quotationId']??''); $st=$pdo->prepare('SELECT status,expires_at,materials FROM quotations WHERE id=? AND account_id=?'); $st->execute([$id,$actor['id']]); $quote=$st->fetch();
   if (!$quote || $quote['status']!=='confirmed') jsonResponse(false,null,'This quotation is not available for confirmation.',422);
   if ($quote['expires_at'] && strtotime($quote['expires_at'])<time()) jsonResponse(false,null,'This quotation has expired. Please request an updated quotation.',422);
-  $items=json_decode((string)$quote['materials'],true);
-  if (!is_array($items)||!count($items)) jsonResponse(false,null,'This quotation has no valid material items.',422);
-  foreach ($items as $item) { $m=$pdo->prepare('SELECT quantity,status FROM materials WHERE id=?'); $m->execute([(string)($item['materialId']??'')]); $stock=$m->fetch(); if (!$stock || $stock['status']==='Unavailable' || (float)($item['quantity']??0)>(float)$stock['quantity']) jsonResponse(false,null,'Requested quantity exceeds current inventory availability.',422); }
+  $items=decodeItemList($quote['materials']);
+  if (!$items) jsonResponse(false,null,'This quotation has no valid material items.',422);
+  foreach ($items as $item) { $quantity=(float)($item['quantity']??0); $price=(float)($item['price']??0); if (!is_finite($quantity)||$quantity<=0) jsonResponse(false,null,'The quotation contains an invalid material quantity.',422); if (!is_finite($price)||$price<=0 || !isset($item['subtotal'])) jsonResponse(false,null,'This quotation needs current prices. Please ask staff to update and reapprove it before confirming.',409); $m=$pdo->prepare('SELECT quantity,status FROM materials WHERE id=?'); $m->execute([(string)($item['materialId']??'')]); $stock=$m->fetch(); if (!$stock || $stock['status']==='Unavailable' || $quantity>(float)$stock['quantity']) jsonResponse(false,null,'Requested quantity exceeds current inventory availability.',422); }
   jsonResponse(true,true);
 }
 
@@ -193,9 +193,10 @@ if ($action==='order_edit_submit') {
       if (isset($seen[$mid])) { $pdo->rollBack(); jsonResponse(false,null,'A material can only appear once in the edited order.',422); }
       $seen[$mid]=true;
       $imageColumn=materialImageColumn($pdo);
-      $m=$pdo->prepare("SELECT id,sku,name,category,unit,quantity,status,`$imageColumn` AS material_image_url FROM materials WHERE id=?"); $m->execute([$mid]); $material=$m->fetch();
+       $m=$pdo->prepare("SELECT id,sku,name,category,unit,quantity,status,unit_price,`$imageColumn` AS material_image_url FROM materials WHERE id=?"); $m->execute([$mid]); $material=$m->fetch();
       if (!$material) { $pdo->rollBack(); jsonResponse(false,null,'One of the selected materials no longer exists in inventory.',422); }
-      $clean[]=['materialId'=>$material['id'],'sku'=>$material['sku'],'materialName'=>$material['name'],'category'=>$material['category'],'imageUrl'=>$material['material_image_url'],'quantity'=>$qty,'unit'=>$material['unit']];
+       $unitPrice=max(0,(float)$material['unit_price']);
+       $clean[]=['materialId'=>$material['id'],'sku'=>$material['sku'],'materialName'=>$material['name'],'category'=>$material['category'],'imageUrl'=>$material['material_image_url'],'quantity'=>$qty,'unit'=>$material['unit'],'price'=>$unitPrice,'subtotal'=>round($unitPrice*$qty,2)];
     }
     $previous=json_decode($order['materials'],true); if (!is_array($previous)) $previous=[];
     $oldById=[]; foreach ($previous as $item) if (!empty($item['materialId'])) $oldById[(string)$item['materialId']]=$item;
@@ -229,16 +230,21 @@ if ($action==='order_edit_review') {
     if (!$request || $request['status']!=='PENDING') { $pdo->rollBack(); jsonResponse(false,null,'Pending edit request not found.',404); }
     if ($decision==='approve') {
       if ($request['order_status']!=='EDIT_REQUESTED') { $pdo->rollBack(); jsonResponse(false,null,'The order can no longer be updated.',422); }
-      $items=json_decode($request['requested_items'],true); if (!is_array($items)||!count($items)) { $pdo->rollBack(); jsonResponse(false,null,'The requested items are invalid.',422); }
+       $items=json_decode($request['requested_items'],true); if (!is_array($items)||!count($items)) { $pdo->rollBack(); jsonResponse(false,null,'The requested items are invalid.',422); }
+       $pricing=priceQuotationItems($pdo,$items,'',true); $items=$pricing['items']; $totalAmount=$pricing['totalAmount'];
       foreach ($items as $item) { $m=$pdo->prepare('SELECT quantity,status FROM materials WHERE id=? FOR UPDATE'); $m->execute([(string)($item['materialId']??'')]); $stock=$m->fetch(); if (!$stock || $stock['status']==='Unavailable' || (float)($item['quantity']??0)<=0 || (float)($item['quantity']??0)>(float)$stock['quantity']) { $available=$stock?(float)$stock['quantity']:0; $pdo->rollBack(); jsonResponse(false,null,"Unable to approve: only $available units are currently available.",422); } }
-      $quantity=implode(', ',array_map(fn($i)=>$i['quantity'].' '.$i['unit'],$items)); $u=$pdo->prepare('UPDATE orders SET materials=?,quantity=?,status=\'APPROVED\',updated_at=? WHERE id=?'); $u->execute([json_encode($items),$quantity,now(),$request['order_id']]);
-      $q=$pdo->prepare('UPDATE quotations SET materials=?,quantity=?,updated_at=? WHERE order_id=?'); $q->execute([json_encode($items),$quantity,now(),$request['order_id']]);
+       $quantity=implode(', ',array_map(fn($i)=>$i['quantity'].' '.$i['unit'],$items)); $u=$pdo->prepare('UPDATE orders SET materials=?,quantity=?,total_amount=?,status=\'APPROVED\',updated_at=? WHERE id=?'); $u->execute([json_encode($items),$quantity,$totalAmount,now(),$request['order_id']]);
+       $q=$pdo->prepare('UPDATE quotations SET materials=?,quantity=?,total_amount=?,updated_at=? WHERE order_id=?'); $q->execute([json_encode($items),$quantity,$totalAmount,now(),$request['order_id']]);
       $status='APPROVED'; $title='Changes Successfully Approved'; $body="Your requested changes for Order #".substr($request['order_id'],0,8)." were successfully approved by {$actor['name']}.";
     } else { $status='REJECTED'; $restore=$pdo->prepare('UPDATE orders SET status=?,updated_at=? WHERE id=?'); $restore->execute([$request['previous_order_status'],now(),$request['order_id']]); $title='Changes Not Approved'; $body="Your requested changes for Order #".substr($request['order_id'],0,8)." could not be approved.".($reason?" Reason: $reason":''); }
     $u=$pdo->prepare('UPDATE order_edit_requests SET status=?,reviewed_at=?,reviewed_by=?,rejection_reason=? WHERE id=?'); $u->execute([$status,now(),$actor['id'],$decision==='reject'?$reason:null,$requestId]);
+     $orderRow=$pdo->prepare('SELECT project_name,total_amount FROM orders WHERE id=?'); $orderRow->execute([$request['order_id']]); $linkedOrder=$orderRow->fetch();
+     $tx=$pdo->prepare('INSERT INTO transactions (id,order_id,account_id,actor_user_id,actor_role,type,status,title,message,metadata,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+     $tx->execute([cleanId(),$request['order_id'],$request['account_id'],$actor['id'],$actor['role'],'ORDER_EDIT_'.$status,$status,$decision==='approve'?'Order changes approved':'Order changes declined',$decision==='approve'?'Staff approved your requested order changes.':($reason?:'Staff declined your requested order changes.'),json_encode(['totalAmount'=>(float)($linkedOrder['total_amount']??0)],JSON_UNESCAPED_UNICODE),now()]);
     $href=$pdo->prepare('SELECT quotation_id FROM orders WHERE id=?'); $href->execute([$request['order_id']]); $quotationId=(string)($href->fetchColumn()?:'');
     if ($quotationId) $body.=' Quotation #'.substr($quotationId,0,8).'.';
     $n=$pdo->prepare('INSERT INTO notifications (id,audience,account_id,title,body,created_at,href) VALUES (?,?,?,?,?,?,?)'); $n->execute([cleanId(),'user',$request['account_id'],$title,$body,now(),$quotationId?'/order-confirmation/'.$quotationId:'/profile']);
+     try { syncDeliveryReceipt($pdo,$request['order_id']); } catch (Throwable $e) { throw $e; }
     $pdo->commit(); jsonResponse(true,['id'=>$requestId,'status'=>$status]);
   } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); error_log($e->__toString()); jsonResponse(false,null,'Could not review this change request. Please try again.',500); }
 }
@@ -273,13 +279,13 @@ if ($action==='list') {
   elseif ($entity==='inquiries' && $current && $current['role']==='user') { $sql.=' WHERE account_id=:uid'; $params['uid']=$current['id']; }
   elseif ($entity==='quotations' && $current && $current['role']==='user') { $sql.=' WHERE account_id=:uid'; $params['uid']=$current['id']; }
   elseif ($entity==='orders' && $current && $current['role']==='user') { $sql.=' WHERE account_id=:uid'; $params['uid']=$current['id']; }
-  elseif ($entity==='delivery_receipts' && $current && $current['role']==='user') { $sql.=' WHERE order_id IN (SELECT id FROM orders WHERE account_id=:uid)'; $params['uid']=$current['id']; }
-  elseif ($entity==='transactions' && $current && $current['role']==='user') { $sql.=' WHERE account_id=:uid'; $params['uid']=$current['id']; }
+   elseif ($entity==='delivery_receipts' && $current && $current['role']==='user') { $sql.=' WHERE order_id IN (SELECT id FROM orders WHERE account_id=:uid) OR order_number IN (SELECT id FROM orders WHERE account_id=:uid_id) OR order_number IN (SELECT order_no FROM orders WHERE account_id=:uid_no AND order_no IS NOT NULL)'; $params['uid']=$current['id']; $params['uid_id']=$current['id']; $params['uid_no']=$current['id']; }
+   elseif ($entity==='transactions' && $current && $current['role']==='user') { $sql.=' WHERE account_id=:uid OR order_id IN (SELECT id FROM orders WHERE account_id=:order_uid)'; $params['uid']=$current['id']; $params['order_uid']=$current['id']; }
   $sql.=' ORDER BY created_at DESC'; $stmt=$pdo->prepare($sql); $stmt->execute($params); $rows=array_map(fn($r)=>mapRow($entity,$r),$stmt->fetchAll()); jsonResponse(true,$rows);
 }
 
 $current=requireUser($pdo);
-$actorRoles=['accounts'=>['admin'],'materials'=>['admin','staff'],'categories'=>['admin','staff'],'suppliers'=>['admin','staff'],'clients'=>['admin','staff'],'inquiries'=>['admin','staff','user'],'quotations'=>['admin','staff'],'orders'=>['admin','staff'],'purchase_orders'=>['admin','staff'],'delivery_receipts'=>['admin','staff'],'stock_in'=>['admin','staff'],'stock_out'=>['admin','staff'],'checklists'=>['admin','staff'],'checklist_items'=>['admin','staff'],'ledger_entries'=>['admin','staff'],'notifications'=>['admin','staff','user'],'transactions'=>['admin','staff','user'],'addresses'=>['admin','staff','user']];
+$actorRoles=['accounts'=>['admin'],'materials'=>['admin','staff'],'categories'=>['admin','staff'],'suppliers'=>['admin','staff'],'clients'=>['admin','staff'],'inquiries'=>['admin','staff','user'],'quotations'=>['admin','staff'],'orders'=>['admin','staff'],'purchase_orders'=>['admin','staff'],'delivery_receipts'=>['admin','staff'],'stock_in'=>['admin','staff'],'stock_out'=>['admin','staff'],'checklists'=>['admin','staff'],'checklist_items'=>['admin','staff'],'ledger_entries'=>['admin','staff'],'notifications'=>['admin','staff','user'],'transactions'=>['admin','staff'],'addresses'=>['admin','staff','user']];
 // Customers may only CREATE their own quotation requests and client profile; everything else stays staff/admin.
 $userCreateOnly=['quotations','clients'];
 $isUserCreate=($action==='create' && $current['role']==='user' && in_array($entity,$userCreateOnly,true));
@@ -290,6 +296,63 @@ $tables=['accounts'=>'users','clients'=>'clients','materials'=>'materials','cate
 $table=$tables[$entity]??null;
 
 function val(array $r,string $key,mixed $default=null): mixed { return array_key_exists($key,$r)?$r[$key]:$default; }
+
+function decodeItemList(mixed $raw): array {
+  $value=$raw;
+  for ($i=0;$i<3 && is_string($value);$i++) {
+    $decoded=json_decode($value,true);
+    if (json_last_error()!==JSON_ERROR_NONE) return [];
+    $value=$decoded;
+  }
+  return is_array($value)?array_values(array_filter($value,'is_array')):[];
+}
+
+/** Resolve quotation lines from inventory and take authoritative price snapshots. */
+function priceQuotationItems(PDO $pdo,mixed $raw,string $quantityText='',bool $requirePrices=false): array {
+  $items=decodeItemList($raw);
+  if (!$items && is_string($raw) && trim($raw)!=='') {
+    $text=trim($raw);
+    if ($text[0]==='[' || $text[0]==='{') throw new RuntimeException('Quotation material data is invalid. Re-enter the material names and quantities.');
+    $names=preg_split('/[,;\r\n]+|\s+and\s+/i',$text,-1,PREG_SPLIT_NO_EMPTY) ?: [];
+    $quantityParts=preg_split('/;|\r\n|\n|,(?!\d{3}(?:\D|$))/',$quantityText,-1,PREG_SPLIT_NO_EMPTY) ?: [];
+    if (!$names || count($names)!==count($quantityParts)) throw new RuntimeException('Add one quantity for each material before confirming the quotation.');
+    $inventory=$pdo->query('SELECT id,sku,name,category FROM materials')->fetchAll();
+    $items=[];
+    foreach ($names as $index=>$name) {
+      $normalized=strtolower(trim((string)$name));
+      $wanted=preg_split('/[^a-z0-9]+/',preg_replace('/[^a-z0-9\s-]/i',' ', $normalized),-1,PREG_SPLIT_NO_EMPTY) ?: [];
+      $matches=[];
+      foreach ($inventory as $candidate) {
+        if (strtolower(trim($candidate['name']))===$normalized || strtolower(trim($candidate['sku']))===$normalized) { $matches=[['row'=>$candidate,'extra'=>0]]; break; }
+        $available=preg_split('/[^a-z0-9]+/',strtolower($candidate['name'].' '.$candidate['category'].' '.$candidate['sku']),-1,PREG_SPLIT_NO_EMPTY) ?: [];
+        if ($wanted && !array_diff($wanted,$available)) $matches[]=['row'=>$candidate,'extra'=>count(array_unique($available))-count(array_unique($wanted))];
+      }
+      usort($matches,fn($a,$b)=>$a['extra']<=>$b['extra']);
+      if (!$matches) throw new RuntimeException('No inventory material matches "'.trim((string)$name).'". Choose a listed material name.');
+      $quantityValue=preg_replace('/(\d),(?=\d{3}(?:\D|$))/','$1',(string)$quantityParts[$index]);
+      preg_match('/\d+(?:\.\d+)?/',$quantityValue,$quantityMatch);
+      $items[]=['materialId'=>$matches[0]['row']['id'],'quantity'=>(float)($quantityMatch[0]??0)];
+    }
+  }
+  if (!$items) throw new RuntimeException('The quotation must contain valid inventory materials.');
+  $imageColumn=materialImageColumn($pdo);
+  $lookup=$pdo->prepare("SELECT id,sku,name,category,unit,quantity,status,unit_price,`$imageColumn` AS image_url FROM materials WHERE id=?");
+  $clean=[]; $total=0.0;
+  foreach ($items as $item) {
+    $id=trim((string)($item['materialId']??''));
+    $quantity=(float)($item['quantity']??0);
+    if ($id==='' || !is_finite($quantity) || $quantity<=0) throw new RuntimeException('Each quotation material needs a valid inventory item and positive quantity.');
+    $lookup->execute([$id]); $material=$lookup->fetch();
+    if (!$material) throw new RuntimeException('One of the selected materials no longer exists in inventory.');
+    $price=max(0,(float)$material['unit_price']);
+    if ($requirePrices && $price<=0) throw new RuntimeException('Set a price for '.$material['name'].' in Staff > Inventory > Materials before approving this quotation.');
+    $subtotal=round($quantity*$price,2);
+    $line=['materialId'=>$material['id'],'materialName'=>$material['name'],'sku'=>$material['sku'],'category'=>$material['category'],'imageUrl'=>$material['image_url'],'quantity'=>$quantity,'unit'=>$material['unit'],'price'=>$price,'subtotal'=>$subtotal];
+    foreach (['brand','size','color','variant'] as $optional) if (isset($item[$optional]) && is_scalar($item[$optional])) $line[$optional]=(string)$item[$optional];
+    $clean[]=$line; $total+=$subtotal;
+  }
+  return ['items'=>$clean,'totalAmount'=>round($total,2)];
+}
 
 // Next human-readable number such as ORD-2026-0001 or DR-2026-0001 (resets each year).
 function nextNumber(PDO $pdo,string $table,string $col,string $prefix): string {
@@ -322,12 +385,12 @@ function syncDeliveryReceipt(PDO $pdo,string $orderId): void {
   $f=$pdo->prepare('SELECT * FROM delivery_receipts WHERE order_id=? OR order_number=? OR order_number=? LIMIT 1'); $f->execute([$o['id'],$o['id'],$orderNo]); $dr=$f->fetch();
   $n=now();
   if (!$dr) {
-    $ins=$pdo->prepare('INSERT INTO delivery_receipts (id,dr_number,order_number,order_id,client,items,sku,quantity,date,released_by,status,delivery_method,delivery_address,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $ins->execute([cleanId(),nextNumber($pdo,'delivery_receipts','dr_number','DR'),$orderNo,$o['id'],$o['client_name'],$o['materials'],'',(float)$o['quantity'],gmdate('Y-m-d'),'System',$map[$o['status']]??'Draft',$o['delivery_method'],$addr,$o['payment_method'],$n,$n]);
+    $ins=$pdo->prepare('INSERT INTO delivery_receipts (id,dr_number,order_number,order_id,client,items,sku,quantity,total_amount,date,released_by,status,delivery_method,delivery_address,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+    $ins->execute([cleanId(),nextNumber($pdo,'delivery_receipts','dr_number','DR'),$orderNo,$o['id'],$o['client_name'],$o['materials'],'',(float)$o['quantity'],(float)$o['total_amount'],gmdate('Y-m-d'),'System',$map[$o['status']]??'Draft',$o['delivery_method'],$addr,$o['payment_method'],$n,$n]);
   } else {
     $status=$map[$o['status']]??$dr['status'];
-    $up=$pdo->prepare('UPDATE delivery_receipts SET order_number=?,order_id=?,client=?,items=?,quantity=?,status=?,delivery_method=?,delivery_address=?,payment_method=?,updated_at=? WHERE id=?');
-    $up->execute([$orderNo,$o['id'],$o['client_name'],$o['materials'],(float)$o['quantity'],$status,$o['delivery_method'],$addr,$o['payment_method'],$n,$dr['id']]);
+    $up=$pdo->prepare('UPDATE delivery_receipts SET order_number=?,order_id=?,client=?,items=?,quantity=?,total_amount=?,status=?,delivery_method=?,delivery_address=?,payment_method=?,updated_at=? WHERE id=?');
+    $up->execute([$orderNo,$o['id'],$o['client_name'],$o['materials'],(float)$o['quantity'],(float)$o['total_amount'],$status,$o['delivery_method'],$addr,$o['payment_method'],$n,$dr['id']]);
   }
 }
 
@@ -374,7 +437,7 @@ if ($action==='confirm_quotation_order') {
     if ($q['status']!=='confirmed') { $pdo->rollBack(); jsonResponse(false,null,'Staff must approve the latest quotation before you can confirm it.',409); }
     if (!empty($q['customer_confirmed_at']) && !empty($q['order_id'])) {
       $existing=$pdo->prepare('SELECT * FROM orders WHERE id=?'); $existing->execute([$q['order_id']]); $order=$existing->fetch();
-      if ($order) { $pdo->commit(); jsonResponse(true,mapRow('orders',$order)); }
+      if ($order) { syncDeliveryReceipt($pdo,(string)$order['id']); $pdo->commit(); jsonResponse(true,mapRow('orders',$order)); }
     }
     if ($deliveryMethod==='Delivery' && !$deliveryAddressId) { $pdo->rollBack(); jsonResponse(false,null,'Choose a delivery address before confirming.',422); }
     if ($deliveryAddressId) {
@@ -387,17 +450,19 @@ if ($action==='confirm_quotation_order') {
     }
     if (empty($order)) {
       $orderId=cleanId();
-      $ins=$pdo->prepare('INSERT INTO orders (id,quotation_id,inquiry_id,client_id,account_id,project_name,client_name,materials,quantity,status,delivery_method,delivery_address_id,payment_method,notes,confirmed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-      $ins->execute([$orderId,$q['id'],$q['inquiry_id'],$q['client_id'],$q['account_id'],$q['project_name'],$q['customer_name']?:'Customer',$q['materials'],$q['quantity'],'Confirmed',$deliveryMethod,$deliveryAddressId,$paymentMethod,$q['notes'],$n,$n,$n]);
+      $ins=$pdo->prepare('INSERT INTO orders (id,quotation_id,inquiry_id,client_id,account_id,project_name,client_name,materials,quantity,total_amount,status,delivery_method,delivery_address_id,payment_method,notes,confirmed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+      $ins->execute([$orderId,$q['id'],$q['inquiry_id'],$q['client_id'],$q['account_id'],$q['project_name'],$q['customer_name']?:'Customer',$q['materials'],$q['quantity'],(float)($q['total_amount']??0),'Confirmed',$deliveryMethod,$deliveryAddressId,$paymentMethod,$q['notes'],$n,$n,$n]);
       assignOrderNumber($pdo,$orderId);
     } else {
-      $up=$pdo->prepare("UPDATE orders SET project_name=?,client_name=?,materials=?,quantity=?,status='Confirmed',delivery_method=?,delivery_address_id=?,payment_method=?,notes=?,confirmed_at=?,updated_at=? WHERE id=?");
-      $up->execute([$q['project_name'],$q['customer_name']?:'Customer',$q['materials'],$q['quantity'],$deliveryMethod,$deliveryAddressId,$paymentMethod,$q['notes'],$n,$n,$orderId]);
+      $up=$pdo->prepare("UPDATE orders SET project_name=?,client_name=?,materials=?,quantity=?,total_amount=?,status='Confirmed',delivery_method=?,delivery_address_id=?,payment_method=?,notes=?,confirmed_at=?,updated_at=? WHERE id=?");
+      $up->execute([$q['project_name'],$q['customer_name']?:'Customer',$q['materials'],$q['quantity'],(float)($q['total_amount']??0),$deliveryMethod,$deliveryAddressId,$paymentMethod,$q['notes'],$n,$n,$orderId]);
     }
     $up=$pdo->prepare('UPDATE quotations SET customer_confirmed_at=?,order_id=?,updated_at=? WHERE id=?'); $up->execute([$n,$orderId,$n,$quotationId]);
+    $tx=$pdo->prepare('INSERT INTO transactions (id,order_id,account_id,actor_user_id,actor_role,type,status,title,message,metadata,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+    $tx->execute([cleanId(),$orderId,$actor['id'],$actor['id'],'user','ORDER_CONFIRMED','Confirmed','Customer confirmed order',"{$actor['name']} confirmed the quotation for {$q['project_name']}.",json_encode(['quotationId'=>$q['id'],'totalAmount'=>(float)($q['total_amount']??0),'deliveryMethod'=>$deliveryMethod,'paymentMethod'=>$paymentMethod,'deliveryAddressId'=>$deliveryAddressId],JSON_UNESCAPED_UNICODE),$n]);
     $st=$pdo->prepare('SELECT * FROM orders WHERE id=?'); $st->execute([$orderId]); $order=$st->fetch();
+    syncDeliveryReceipt($pdo,$orderId);
     $pdo->commit();
-    try { syncDeliveryReceipt($pdo,$orderId); } catch (Throwable $e) { /* The confirmed order remains saved if receipt generation fails. */ }
     jsonResponse(true,mapRow('orders',$order));
   } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
@@ -413,29 +478,47 @@ if ($action==='create') {
       case 'accounts': jsonResponse(false,null,'Use registration to create accounts.',405);
       case 'materials':
         $quantity=(float)val($r,'quantity',0); $minimum=(float)val($r,'minimumStock',0);
-        if ($quantity<0 || $minimum<0) throw new RuntimeException('Inventory quantity and minimum stock cannot be negative.');
+        $unitPrice=(float)val($r,'unitPrice',0);
+        if ($quantity<0 || $minimum<0 || !is_finite($unitPrice) || $unitPrice<0) throw new RuntimeException('Inventory quantity, minimum stock, and price cannot be negative.');
         $materialStatus=$quantity<=0?'Unavailable':($quantity<=$minimum?'Limited':'Available');
-        $savedMaterialImage=!empty($r['imageData'])?saveMaterialImage((string)$r['imageData']):null; $imageColumn=materialImageColumn($pdo); $st=$pdo->prepare("INSERT INTO materials (id,sku,name,category,unit,quantity,minimum_stock,status,`$imageColumn`,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)"); $st->execute([$id,val($r,'sku'),val($r,'name'),val($r,'category'),val($r,'unit'),$quantity,$minimum,$materialStatus,$savedMaterialImage,val($r,'createdAt',$n),$n]); break;
+        $savedMaterialImage=!empty($r['imageData'])?saveMaterialImage((string)$r['imageData']):null; $imageColumn=materialImageColumn($pdo); $st=$pdo->prepare("INSERT INTO materials (id,sku,name,category,unit,quantity,minimum_stock,unit_price,status,`$imageColumn`,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"); $st->execute([$id,val($r,'sku'),val($r,'name'),val($r,'category'),val($r,'unit'),$quantity,$minimum,round($unitPrice,2),$materialStatus,$savedMaterialImage,val($r,'createdAt',$n),$n]); break;
       case 'categories': $st=$pdo->prepare('INSERT INTO categories (id,name,description,status,created_at,updated_at) VALUES (?,?,?,?,?,?)'); $st->execute([$id,val($r,'name'),val($r,'description'),val($r,'status','active'),val($r,'createdAt',$n),$n]); break;
-      case 'clients': $st=$pdo->prepare('INSERT INTO clients (id,account_id,name,email,phone,company,address,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'accountId'),val($r,'name'),val($r,'email'),val($r,'phone'),val($r,'company'),val($r,'address'),val($r,'status','active'),val($r,'createdAt',$n),$n]); break;
+      case 'clients':
+        $accountId=$current['role']==='user'?$current['id']:val($r,'accountId');
+        if ($current['role']==='user') {
+          $existing=$pdo->prepare('SELECT id FROM clients WHERE account_id=? LIMIT 1'); $existing->execute([$accountId]); $existingId=$existing->fetchColumn();
+          if ($existingId) $id=(string)$existingId;
+          else { $collision=$pdo->prepare('SELECT account_id FROM clients WHERE id=?'); $collision->execute([$id]); $owner=$collision->fetchColumn(); if ($owner!==false) $id=cleanId(); }
+        }
+        if ($current['role']==='user' && $existingId) {
+          $st=$pdo->prepare('UPDATE clients SET name=?,email=?,phone=?,company=?,address=?,status=?,updated_at=? WHERE id=?');
+          $st->execute([val($r,'name'),val($r,'email'),val($r,'phone'),val($r,'company'),val($r,'address'),val($r,'status','active'),$n,$id]);
+        } else {
+          $st=$pdo->prepare('INSERT INTO clients (id,account_id,name,email,phone,company,address,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)');
+          $st->execute([$id,$accountId,val($r,'name'),val($r,'email'),val($r,'phone'),val($r,'company'),val($r,'address'),val($r,'status','active'),val($r,'createdAt',$n),$n]);
+        }
+        break;
       case 'suppliers': $st=$pdo->prepare('INSERT INTO suppliers (id,name,contact,phone,email,address,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'name'),val($r,'contactName',val($r,'contact')) ,val($r,'phone'),val($r,'email'),val($r,'address'),val($r,'status','active'),$n,$n]); break;
       case 'inquiries': $st=$pdo->prepare('INSERT INTO inquiries (id,account_id,project,project_type,location,materials,quantity,timeline,notes,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'accountId',$current['id']),val($r,'project'),val($r,'projectType'),val($r,'location'),val($r,'materials'),val($r,'quantity'),val($r,'timeline'),val($r,'notes'),val($r,'status','pending'),val($r,'createdAt',$n),$n]); break;
       case 'quotations':
         if ($current['role']==='user') {
           $r['accountId']=$current['id'];
-          $items=json_decode((string)val($r,'materials',''),true);
-          if (!is_array($items) || count($items)===0) jsonResponse(false,null,'Select at least one inventory material.',422);
-          foreach ($items as $item) {
-            $mid=(string)($item['materialId']??''); $qty=(float)($item['quantity']??0);
-            if (!$mid || !is_finite($qty) || $qty<=0) jsonResponse(false,null,'Each material quantity must be greater than zero.',422);
+          $pricing=priceQuotationItems($pdo,val($r,'materials',''));
+          foreach ($pricing['items'] as $item) {
+            $mid=$item['materialId']; $qty=$item['quantity'];
             $stock=$pdo->prepare('SELECT quantity,status FROM materials WHERE id=?'); $stock->execute([$mid]); $available=$stock->fetch();
             if (!$available || $available['status']==='Unavailable' || $qty>(float)$available['quantity']) jsonResponse(false,null,'Requested quantity exceeds current inventory availability.',422);
           }
+          $r['materials']=json_encode($pricing['items'],JSON_UNESCAPED_UNICODE);
+          $r['totalAmount']=$pricing['totalAmount'];
           $r['status']='pending';
         }
         $expiresAt=gmdate('Y-m-d H:i:s',time()+3*86400);
-        $st=$pdo->prepare('INSERT INTO quotations (id,inquiry_id,client_id,account_id,customer_name,customer_email,customer_phone,project_name,project_type,location,materials,quantity,timeline,notes,status,inventory_status,checklist_status,confirmed_at,confirmation_sent_at,customer_confirmed_at,order_id,expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'inquiryId'),val($r,'clientId'),val($r,'accountId'),val($r,'customerName'),val($r,'customerEmail'),val($r,'customerPhone'),val($r,'projectName'),val($r,'projectType'),val($r,'location'),val($r,'materials'),val($r,'quantity'),val($r,'timeline'),val($r,'notes'),val($r,'status','pending'),val($r,'inventoryStatus'),val($r,'checklistStatus'),val($r,'confirmedAt'),val($r,'confirmationSentAt'),val($r,'customerConfirmedAt'),val($r,'orderId'),$expiresAt,val($r,'createdAt',$n),$n]); break;
-      case 'orders': $st=$pdo->prepare('INSERT INTO orders (id,quotation_id,inquiry_id,client_id,account_id,project_name,client_name,materials,quantity,status,delivery_method,delivery_address_id,payment_method,notes,confirmed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'quotationId'),val($r,'inquiryId'),val($r,'clientId'),val($r,'accountId',$current['role']==='user'?$current['id']:null),val($r,'projectName'),val($r,'clientName'),val($r,'materials'),val($r,'quantity'),val($r,'status','Pending'),val($r,'deliveryMethod'),val($r,'deliveryAddressId'),val($r,'paymentMethod'),val($r,'notes'),val($r,'confirmedAt'),val($r,'createdAt',$n),$n]); break;
+        $st=$pdo->prepare('INSERT INTO quotations (id,inquiry_id,client_id,account_id,customer_name,customer_email,customer_phone,project_name,project_type,location,materials,quantity,total_amount,timeline,notes,status,inventory_status,checklist_status,confirmed_at,confirmation_sent_at,customer_confirmed_at,order_id,expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'inquiryId'),val($r,'clientId'),val($r,'accountId'),val($r,'customerName'),val($r,'customerEmail'),val($r,'customerPhone'),val($r,'projectName'),val($r,'projectType'),val($r,'location'),val($r,'materials'),val($r,'quantity'),val($r,'totalAmount',0),val($r,'timeline'),val($r,'notes'),val($r,'status','pending'),val($r,'inventoryStatus'),val($r,'checklistStatus'),val($r,'confirmedAt'),val($r,'confirmationSentAt'),val($r,'customerConfirmedAt'),val($r,'orderId'),$expiresAt,val($r,'createdAt',$n),$n]); break;
+      case 'orders':
+        $totalAmount=(float)val($r,'totalAmount',0); if (!is_finite($totalAmount) || $totalAmount<0) throw new RuntimeException('Order total cannot be negative.');
+        $st=$pdo->prepare('INSERT INTO orders (id,quotation_id,inquiry_id,client_id,account_id,project_name,client_name,materials,quantity,total_amount,status,delivery_method,delivery_address_id,payment_method,notes,confirmed_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $st->execute([$id,val($r,'quotationId'),val($r,'inquiryId'),val($r,'clientId'),val($r,'accountId',$current['role']==='user'?$current['id']:null),val($r,'projectName'),val($r,'clientName'),val($r,'materials'),val($r,'quantity'),round($totalAmount,2),val($r,'status','Pending'),val($r,'deliveryMethod'),val($r,'deliveryAddressId'),val($r,'paymentMethod'),val($r,'notes'),val($r,'confirmedAt'),val($r,'createdAt',$n),$n]); break;
       case 'purchase_orders':
         $supplierId=(string)val($r,'supplierId',''); $materialId=(string)val($r,'materialId',''); $quantity=(float)val($r,'quantity',0); $unitCost=(float)val($r,'unitCost',0);
         if ($quantity<=0 || $unitCost<0) throw new RuntimeException('Purchase order quantity must be positive and unit cost cannot be negative.');
@@ -444,7 +527,10 @@ if ($action==='create') {
         if (!$supplier || !$material) throw new RuntimeException('Choose an active supplier and an existing material.');
         $st=$pdo->prepare('INSERT INTO purchase_orders (id,po_number,supplier_id,supplier_name,material_id,material,sku,quantity,unit_cost,total_amount,order_date,expected_date,received_at,status,notes,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $st->execute([$id,nextNumber($pdo,'purchase_orders','po_number','PO'),$supplier['id'],$supplier['name'],$material['id'],$material['name'],$material['sku'],$quantity,$unitCost,round($quantity*$unitCost,2),val($r,'orderDate',gmdate('Y-m-d')),val($r,'expectedDate',gmdate('Y-m-d')),null,'Pending',val($r,'notes'),$current['id'],$n,$n]); break;
-      case 'delivery_receipts': $st=$pdo->prepare('INSERT INTO delivery_receipts (id,dr_number,order_number,client,items,sku,quantity,date,released_by,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'drNumber'),val($r,'orderNumber'),val($r,'client'),val($r,'items'),val($r,'sku',''),val($r,'quantity',0),val($r,'date',gmdate('Y-m-d')),$current['name'],val($r,'status','Draft'),val($r,'createdAt',$n),$n]); break;
+      case 'delivery_receipts':
+        $totalAmount=(float)val($r,'totalAmount',0); if (!is_finite($totalAmount) || $totalAmount<0) throw new RuntimeException('Receipt total cannot be negative.');
+        $st=$pdo->prepare('INSERT INTO delivery_receipts (id,dr_number,order_number,order_id,client,items,sku,quantity,total_amount,date,released_by,status,delivery_method,delivery_address,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $st->execute([$id,val($r,'drNumber'),val($r,'orderNumber'),val($r,'orderId'),val($r,'client'),val($r,'items'),val($r,'sku',''),val($r,'quantity',0),round($totalAmount,2),val($r,'date',gmdate('Y-m-d')),$current['name'],val($r,'status','Draft'),val($r,'deliveryMethod'),val($r,'deliveryAddress'),val($r,'paymentMethod'),val($r,'createdAt',$n),$n]); break;
       case 'stock_in':
         $quantity=(float)val($r,'quantity',0); if ($quantity<=0) throw new RuntimeException('Received quantity must be greater than zero.');
         $pdo->beginTransaction(); $mat=$pdo->prepare('SELECT * FROM materials WHERE sku=? FOR UPDATE'); $mat->execute([val($r,'sku')]); $materialRow=$mat->fetch();
@@ -473,13 +559,13 @@ if ($action==='create') {
 
 if ($action==='update') {
   $id=(string)($input['id']??''); $patch=$input['patch']??[]; if (!$id || !is_array($patch)) jsonResponse(false,null,'Invalid update.',422); $columns=[
-    'materials'=>['sku'=>'sku','name'=>'name','category'=>'category','unit'=>'unit','quantity'=>'quantity','minimumStock'=>'minimum_stock','status'=>'status'],
+    'materials'=>['sku'=>'sku','name'=>'name','category'=>'category','unit'=>'unit','quantity'=>'quantity','minimumStock'=>'minimum_stock','unitPrice'=>'unit_price','status'=>'status'],
     'categories'=>['name'=>'name','description'=>'description','status'=>'status'], 'clients'=>['accountId'=>'account_id','name'=>'name','email'=>'email','phone'=>'phone','company'=>'company','address'=>'address','status'=>'status'], 'suppliers'=>['name'=>'name','contactName'=>'contact','contact'=>'contact','phone'=>'phone','email'=>'email','address'=>'address','status'=>'status'],
     'inquiries'=>['accountId'=>'account_id','project'=>'project','projectType'=>'project_type','location'=>'location','materials'=>'materials','quantity'=>'quantity','timeline'=>'timeline','notes'=>'notes','status'=>'status'],
-    'quotations'=>['inquiryId'=>'inquiry_id','clientId'=>'client_id','accountId'=>'account_id','customerName'=>'customer_name','customerEmail'=>'customer_email','customerPhone'=>'customer_phone','projectName'=>'project_name','projectType'=>'project_type','location'=>'location','materials'=>'materials','quantity'=>'quantity','timeline'=>'timeline','notes'=>'notes','customerChangeRequest'=>'customer_change_request','status'=>'status','inventoryStatus'=>'inventory_status','checklistStatus'=>'checklist_status','confirmedAt'=>'confirmed_at','confirmationSentAt'=>'confirmation_sent_at','customerConfirmedAt'=>'customer_confirmed_at','orderId'=>'order_id','expiresAt'=>'expires_at','cancelledAt'=>'cancelled_at','cancelledBy'=>'cancelled_by','cancelReason'=>'cancel_reason'],
-    'orders'=>['quotationId'=>'quotation_id','inquiryId'=>'inquiry_id','clientId'=>'client_id','accountId'=>'account_id','projectName'=>'project_name','clientName'=>'client_name','materials'=>'materials','quantity'=>'quantity','status'=>'status','deliveryMethod'=>'delivery_method','deliveryAddressId'=>'delivery_address_id','paymentMethod'=>'payment_method','notes'=>'notes','confirmedAt'=>'confirmed_at'],
+    'quotations'=>['inquiryId'=>'inquiry_id','clientId'=>'client_id','accountId'=>'account_id','customerName'=>'customer_name','customerEmail'=>'customer_email','customerPhone'=>'customer_phone','projectName'=>'project_name','projectType'=>'project_type','location'=>'location','materials'=>'materials','quantity'=>'quantity','totalAmount'=>'total_amount','timeline'=>'timeline','notes'=>'notes','customerChangeRequest'=>'customer_change_request','status'=>'status','inventoryStatus'=>'inventory_status','checklistStatus'=>'checklist_status','confirmedAt'=>'confirmed_at','confirmationSentAt'=>'confirmation_sent_at','customerConfirmedAt'=>'customer_confirmed_at','orderId'=>'order_id','expiresAt'=>'expires_at','cancelledAt'=>'cancelled_at','cancelledBy'=>'cancelled_by','cancelReason'=>'cancel_reason'],
+    'orders'=>['quotationId'=>'quotation_id','inquiryId'=>'inquiry_id','clientId'=>'client_id','accountId'=>'account_id','projectName'=>'project_name','clientName'=>'client_name','materials'=>'materials','quantity'=>'quantity','totalAmount'=>'total_amount','status'=>'status','deliveryMethod'=>'delivery_method','deliveryAddressId'=>'delivery_address_id','paymentMethod'=>'payment_method','notes'=>'notes','confirmedAt'=>'confirmed_at'],
     'purchase_orders'=>['status'=>'status','notes'=>'notes'],
-    'delivery_receipts'=>['drNumber'=>'dr_number','orderNumber'=>'order_number','client'=>'client','items'=>'items','sku'=>'sku','quantity'=>'quantity','date'=>'date','releasedBy'=>'released_by','status'=>'status'],
+    'delivery_receipts'=>['drNumber'=>'dr_number','orderNumber'=>'order_number','orderId'=>'order_id','deliveryMethod'=>'delivery_method','deliveryAddress'=>'delivery_address','paymentMethod'=>'payment_method','client'=>'client','items'=>'items','sku'=>'sku','quantity'=>'quantity','totalAmount'=>'total_amount','date'=>'date','releasedBy'=>'released_by','status'=>'status'],
     'stock_in'=>['stockInId'=>'stock_in_id','reference'=>'stock_in_id','sku'=>'sku','material'=>'material','quantity'=>'quantity','supplier'=>'supplier','receivedBy'=>'received_by','date'=>'date','status'=>'status'],
     'stock_out'=>['stockOutId'=>'stock_out_id','sku'=>'sku','material'=>'material','quantity'=>'quantity','orderRef'=>'order_ref','destination'=>'destination','warehouseStaff'=>'warehouse_staff','date'=>'date','status'=>'status'],
     'checklists'=>['quotationId'=>'quotation_id','title'=>'title','status'=>'status','items'=>'items_json'], 'checklist_items'=>['checklistId'=>'checklist_id','label'=>'label','completed'=>'completed'],
@@ -515,8 +601,18 @@ if ($action==='update') {
     if (($patch['status']??null)==='cancelled') { $patch['cancelledAt']=now(); $patch['cancelledBy']=$current['id']; }
   }
   if ($entity==='quotations' && isset($patch['status']) && $patch['status']==='confirmed') {
-    $expiry=$pdo->prepare('SELECT expires_at FROM quotations WHERE id=?'); $expiry->execute([$id]); $validUntil=$expiry->fetchColumn();
+    $expiry=$pdo->prepare('SELECT expires_at,materials,quantity FROM quotations WHERE id=?'); $expiry->execute([$id]); $quotationToConfirm=$expiry->fetch();
+    $validUntil=$quotationToConfirm['expires_at']??null;
     if ($validUntil && strtotime((string)$validUntil)<time()) jsonResponse(false,null,'This quotation has expired and cannot be confirmed.',422);
+    $pricing=priceQuotationItems($pdo,val($patch,'materials',$quotationToConfirm['materials']??''),(string)val($patch,'quantity',$quotationToConfirm['quantity']??''),true);
+    $checkStmt=$pdo->prepare('SELECT status,items_json FROM checklists WHERE quotation_id=? LIMIT 1'); $checkStmt->execute([$id]); $checklist=$checkStmt->fetch();
+    $checkedItems=json_decode((string)($checklist['items_json']??''),true); if (!is_array($checkedItems)) $checkedItems=[];
+    $actualNames=[]; foreach ($checkedItems as $checkItem) if (is_array($checkItem) && ($checkItem['kind']??'')==='material') $actualNames[]=strtolower(trim((string)($checkItem['materialName']??'')));
+    $expectedNames=array_map(fn($item)=>strtolower(trim((string)($item['materialName']??''))),$pricing['items']);
+    sort($actualNames); sort($expectedNames);
+    if (!$checklist || !in_array($checklist['status'],['Completed','Confirmed'],true) || !$checkedItems || count(array_filter($checkedItems,fn($item)=>!is_array($item) || empty($item['completed'])))>0 || !$expectedNames || $actualNames!==$expectedNames) jsonResponse(false,null,'Complete and confirm the material checklist using the quotation material names before approving it.',409);
+    $patch['materials']=json_encode($pricing['items'],JSON_UNESCAPED_UNICODE);
+    $patch['totalAmount']=$pricing['totalAmount'];
   }
   if ($entity==='orders' && $current['role']==='user') {
     $order=$pdo->prepare('SELECT account_id,status FROM orders WHERE id=?'); $order->execute([$id]); $owned=$order->fetch();
@@ -536,6 +632,16 @@ if ($action==='update') {
     $quantity=(float)($patch['quantity']??$stockRow['quantity']); $minimum=(float)($patch['minimumStock']??$stockRow['minimum_stock']);
     if ($quantity<0 || $minimum<0) jsonResponse(false,null,'Inventory quantity and minimum stock cannot be negative.',422);
     $patch['status']=$quantity<=0?'Unavailable':($quantity<=$minimum?'Limited':'Available');
+  }
+  if ($entity==='materials' && array_key_exists('unitPrice',$patch)) {
+    $price=(float)$patch['unitPrice'];
+    if (!is_finite($price) || $price<0) jsonResponse(false,null,'Material price cannot be negative.',422);
+    $patch['unitPrice']=round($price,2);
+  }
+  if (in_array($entity,['orders','delivery_receipts'],true) && array_key_exists('totalAmount',$patch)) {
+    $amount=(float)$patch['totalAmount'];
+    if (!is_finite($amount) || $amount<0) jsonResponse(false,null,'Transaction total cannot be negative.',422);
+    $patch['totalAmount']=round($amount,2);
   }
   $sets=[];$params=[];
   foreach($patch as $k=>$v){ if(!isset($mapped[$k])) continue; $sets[]='`'.$mapped[$k].'`=?'; if($entity==='notifications' && $k==='read') $v=$v?now():null; if(in_array($k,['completed','isDefault','notificationEmail'],true)) $v=boolish($v); if($k==='metadata' || $k==='items') $v=json_encode($v); $params[]=$v; }
@@ -673,9 +779,7 @@ if ($action==='transaction_status') {
       }
     }
   }
-  $st=$pdo->prepare('UPDATE orders SET status=?, updated_at=? WHERE id=?'); $st->execute([$status,now(),$orderId]); try { syncDeliveryReceipt($pdo,$orderId); } catch (Throwable $e) {}
-  $tid=cleanId(); $tx=$pdo->prepare('INSERT INTO transactions (id,order_id,account_id,actor_user_id,actor_role,type,status,title,message,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)'); $tx->execute([$tid,$orderId,null,$current['id'],$current['role'],'ORDER_STATUS',$status,'Order status updated',$message?:"Order status changed to $status.",now()]);
-  $ord=$pdo->prepare('SELECT * FROM orders WHERE id=?'); $ord->execute([$orderId]); $order=$ord->fetch(); if($order && $order['account_id']) { $nid=cleanId(); $nt=$pdo->prepare('INSERT INTO notifications (id,audience,account_id,title,body,created_at,href) VALUES (?,?,?,?,?,?,?)'); $nt->execute([$nid,'user',$order['account_id'],'Order update',"Your order {$order['id']} is now $status.",now(),'/profile?tab=orders']); }
+  try { syncDeliveryReceipt($pdo,$orderId); } catch (Throwable $e) { error_log('Could not refresh delivery receipt: '.$e->getMessage()); }
   jsonResponse(true,true);
 }
 

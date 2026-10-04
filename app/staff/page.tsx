@@ -1,6 +1,7 @@
 "use client";
 
-import { isOpenQuotationStatus, useQuotations } from "@/lib/quotations-store";
+import { isOpenQuotationStatus, parseQuotationItems, useQuotations } from "@/lib/quotations-store";
+import { formatUnitPrice } from "@/lib/money";
 import { useStockIns } from "@/lib/stock-in-store";
 import { useStockOuts } from "@/lib/stock-out-store";
 
@@ -110,7 +111,7 @@ export default function StaffPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {quotation.materials} · Qty: {quotation.quantity}
+                  {parseQuotationItems(quotation.materials).map((item) => item.materialName + " (" + item.quantity + " " + item.unit + ")").join(", ") || quotation.materials} · Qty: {quotation.quantity} · {formatUnitPrice(quotation.totalAmount)}
                 </p>
               </div>
             ))

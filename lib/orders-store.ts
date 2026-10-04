@@ -40,6 +40,7 @@ export type Order = {
   deliveryAddressId?: string;
   paymentMethod?: string;
   notes?: string;
+  totalAmount?: number;
 };
 
 export function useOrders() {

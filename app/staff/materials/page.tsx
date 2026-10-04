@@ -11,6 +11,7 @@ import {
   updateMaterial,
   useMaterials,
 } from "@/lib/materials-store";
+import { formatUnitPrice } from "@/lib/money";
 
 const STATUS_VARIANT = {
   Available: "secondary",
@@ -35,17 +36,19 @@ export default function MaterialsPage() {
           unit: v.unit,
           quantity: Number(v.quantity) || 0,
           minimumStock: Number(v.minimumStock) || 0,
+          unitPrice: Number(v.unitPrice) || 0,
           status: "Available",
           imageData: v.imageData,
         })
       }
       onDelete={deleteMaterial}
-      onUpdate={(id, v) => updateMaterial(id, { sku: v.sku, name: v.name, category: v.category, unit: v.unit, quantity: Number(v.quantity)||0, minimumStock: Number(v.minimumStock)||0 }, v.imageData)}
+      onUpdate={(id, v) => updateMaterial(id, { sku: v.sku, name: v.name, category: v.category, unit: v.unit, quantity: Number(v.quantity)||0, minimumStock: Number(v.minimumStock)||0, unitPrice: Number(v.unitPrice)||0 }, v.imageData)}
       fields={[
         { key: "sku", label: "SKU", placeholder: "CEM-002" },
         { key: "name", label: "Name", placeholder: "White Cement" },
         { key: "category", label: "Category", placeholder: "Cement" },
         { key: "unit", label: "Unit", placeholder: "Bag" },
+        { key: "unitPrice", label: "Unit price (PHP)", type: "number", placeholder: "0.00", defaultValue: "0" },
         {
           key: "quantity",
           label: "Quantity",
@@ -65,6 +68,7 @@ export default function MaterialsPage() {
         { key: "sku", label: "SKU" },
         { key: "name", label: "Material" },
         { key: "category", label: "Category" },
+        { key: "unitPrice", label: "Price / unit", render: (m) => formatUnitPrice(m.unitPrice) },
         {
           key: "quantity",
           label: "Qty",

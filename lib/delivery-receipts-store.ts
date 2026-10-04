@@ -18,6 +18,7 @@ export type DeliveryReceipt = {
   items: string;
   sku: string;
   quantity: number;
+  totalAmount?: number;
   date: string;
   releasedBy: string;
   status: "Draft" | "Released" | "Delivered";

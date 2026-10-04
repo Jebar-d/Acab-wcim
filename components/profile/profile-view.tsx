@@ -60,6 +60,7 @@ import {
 } from "@/components/delivery-receipt-view";
 import { addNotification, useNotifications } from "@/lib/notifications-store";
 import { useTransactions } from "@/lib/transactions-store";
+import { formatMoney, formatUnitPrice } from "@/lib/money";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -103,6 +104,7 @@ const tabs = [
   { id: "overview", label: "Overview" },
   { id: "quotations", label: "Quotations", userOnly: true },
   { id: "orders", label: "Orders", userOnly: true },
+  { id: "transactions", label: "Transactions", userOnly: true },
   { id: "notifications", label: "Notifications" },
   { id: "addresses", label: "Addresses" },
   { id: "details", label: "Profile details" },
@@ -379,7 +381,7 @@ export function ProfileView() {
 
               {roleIsUser && <Card><CardHeader><CardTitle>Quotations</CardTitle><CardDescription>Review request status and cancel active requests before an order is created.</CardDescription></CardHeader><CardContent className="space-y-3">{userQuotations.length===0?<p className="py-5 text-sm text-muted-foreground">No quotations yet.</p>:userQuotations.map(quotation=><div key={quotation.id} className="rounded-2xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium">{quotation.projectName}</p><p className="text-sm text-muted-foreground">Quotation #{quotation.id.slice(0,8)} · Submitted {formatDate(quotation.createdAt)}</p></div><Badge variant={["cancelled","rejected","expired"].includes(quotation.status)?"destructive":quotation.status==="confirmed"?"secondary":"outline"}>{quotation.status.replaceAll("-"," ").replaceAll("_"," ")}</Badge></div><div className="mt-2 space-y-1 text-sm text-muted-foreground">{parseQuotationItems(quotation.materials).length?parseQuotationItems(quotation.materials).map((item)=><p key={item.materialId}>{item.materialName} · {item.quantity} {item.unit}</p>):quotation.materials}</div>{quotation.expiresAt&&<p className="mt-1 text-xs text-muted-foreground">Valid until {formatDate(quotation.expiresAt)}</p>}<div className="mt-3 flex gap-2">{quotation.status==="confirmed"&&!quotation.customerConfirmedAt&&<Button size="sm" variant="outline" render={<Link href={`/order-confirmation/${quotation.id}`}>Review order</Link>} />}{["pending","reviewing","inventory-check","checklist-pending","ready"].includes(quotation.status)||(quotation.status==="confirmed"&&!quotation.orderId)?<Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={async()=>{if(!window.confirm("Cancel this quotation request?"))return;try{await updateQuotation(quotation.id,{status:"cancelled"});toast.success("Quotation cancelled.");}catch(error){toast.error(error instanceof Error?error.message:"Could not cancel quotation.");}}}>Cancel quotation</Button>:null}</div></div>)}</CardContent></Card>}
               {roleIsUser && <Card><CardHeader><CardTitle>Quotations</CardTitle><CardDescription>Review request status and cancel active requests before an order is created.</CardDescription></CardHeader><CardContent className="space-y-3">{userQuotations.length===0?<p className="py-5 text-sm text-muted-foreground">No quotations yet.</p>:userQuotations.map(quotation=><div key={quotation.id} className="rounded-2xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium">{quotation.projectName}</p><p className="text-sm text-muted-foreground">Quotation #{quotation.id.slice(0,8)} · Submitted {formatDate(quotation.createdAt)}</p></div><Badge variant={["cancelled","rejected","expired"].includes(quotation.status)?"destructive":quotation.status==="confirmed"?"secondary":"outline"}>{quotation.status.replaceAll("-"," ").replaceAll("_"," ")}</Badge></div><div className="mt-2 space-y-1 text-sm text-muted-foreground">{parseQuotationItems(quotation.materials).length?parseQuotationItems(quotation.materials).map((item)=><p key={item.materialId}>{item.materialName} · {item.quantity} {item.unit}</p>):quotation.materials}</div>{quotation.expiresAt&&<p className="mt-1 text-xs text-muted-foreground">Valid until {formatDate(quotation.expiresAt)}</p>}<div className="mt-3 flex gap-2">{quotation.status==="confirmed"&&!quotation.customerConfirmedAt&&<Button size="sm" variant="outline" render={<Link href={`/order-confirmation/${quotation.id}`}>Review order</Link>} />}{["pending","reviewing","inventory-check","checklist-pending","ready"].includes(quotation.status)||(quotation.status==="confirmed"&&!quotation.orderId)?<Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={async()=>{if(!window.confirm("Cancel this quotation request?"))return;try{await updateQuotation(quotation.id,{status:"cancelled"});toast.success("Quotation cancelled.");}catch(error){toast.error(error instanceof Error?error.message:"Could not cancel quotation.");}}}>Cancel quotation</Button>:null}</div></div>)}</CardContent></Card>}
-              {roleIsUser ? <Card><CardHeader><CardTitle>Orders</CardTitle><CardDescription>Track your order progress from confirmation to delivery.</CardDescription></CardHeader><CardContent className="space-y-3">{userOrders.length===0?<p className="py-5 text-sm text-muted-foreground">No orders yet. Confirmed quotations will appear here.</p>:userOrders.map(order=><div key={order.id} className="rounded-2xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium">{order.projectName}</p><p className="text-sm text-muted-foreground">{order.clientName} · {order.quantity}</p></div><Badge variant={order.status === "Cancelled" ? "destructive" : order.status === "Delivered" ? "secondary" : "outline"}>{order.status.replaceAll("_"," ")}</Badge></div><p className="mt-2 text-sm text-muted-foreground">{order.materials}</p><div className="mt-3 flex flex-wrap gap-2">{order.quotationId && ["Confirmed","APPROVED","EDIT_REQUESTED"].includes(order.status) && <Button size="sm" variant="outline" render={<Link href={`/order-confirmation/${order.quotationId}`}>Review / edit order</Link>} />}{["Pending","Confirmed","APPROVED"].includes(order.status) && <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={async () => { if (!window.confirm("Cancel this order?")) return; try { await cancelOrder(order.id, "Customer cancelled this order."); toast.success("Order cancelled successfully."); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not cancel this order."); } }}>Cancel order</Button>}</div></div>)}</CardContent></Card> : <Card><CardHeader><CardTitle>Recent activity</CardTitle><CardDescription>Operational transactions performed by this account.</CardDescription></CardHeader><CardContent className="space-y-3">{userTransactions.slice(0,8).map(tx=><div key={tx.id} className="flex items-start gap-3 rounded-2xl border p-3"><CheckCircle2 className="mt-0.5 size-4 text-primary"/><div><p className="text-sm font-medium">{tx.title}</p><p className="text-xs text-muted-foreground">{tx.status} · {formatDate(tx.createdAt)}</p>{tx.message&&<p className="mt-1 text-sm text-muted-foreground">{tx.message}</p>}</div></div>)}{userTransactions.length===0&&<p className="py-5 text-sm text-muted-foreground">No recorded transactions yet.</p>}</CardContent></Card>}
+              {roleIsUser ? <Card><CardHeader><CardTitle>Orders</CardTitle><CardDescription>Track your order progress from confirmation to delivery.</CardDescription></CardHeader><CardContent className="space-y-3">{userOrders.length===0?<p className="py-5 text-sm text-muted-foreground">No orders yet. Confirmed quotations will appear here.</p>:userOrders.map(order=><div key={order.id} className="rounded-2xl border p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-medium">{order.projectName}</p><p className="text-sm text-muted-foreground">{order.clientName} · {order.quantity}</p></div><Badge variant={order.status === "Cancelled" ? "destructive" : order.status === "Delivered" ? "secondary" : "outline"}>{order.status.replaceAll("_"," ")}</Badge></div><div className="mt-2 flex justify-between gap-3 text-sm text-muted-foreground"><span>{parseQuotationItems(order.materials).map((item) => item.materialName + " (" + item.quantity + " " + item.unit + ")").join(", ") || order.materials}</span><span>{formatUnitPrice(order.totalAmount)}</span></div><div className="mt-3 flex flex-wrap gap-2">{order.quotationId && ["Confirmed","APPROVED","EDIT_REQUESTED"].includes(order.status) && <Button size="sm" variant="outline" render={<Link href={`/order-confirmation/${order.quotationId}`}>Review / edit order</Link>} />}{["Pending","Confirmed","APPROVED"].includes(order.status) && <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={async () => { if (!window.confirm("Cancel this order?")) return; try { await cancelOrder(order.id, "Customer cancelled this order."); toast.success("Order cancelled successfully."); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not cancel this order."); } }}>Cancel order</Button>}</div></div>)}</CardContent></Card> : <Card><CardHeader><CardTitle>Recent activity</CardTitle><CardDescription>Operational transactions performed by this account.</CardDescription></CardHeader><CardContent className="space-y-3">{userTransactions.slice(0,8).map(tx=><div key={tx.id} className="flex items-start gap-3 rounded-2xl border p-3"><CheckCircle2 className="mt-0.5 size-4 text-primary"/><div><p className="text-sm font-medium">{tx.title}</p><p className="text-xs text-muted-foreground">{tx.status} · {formatDate(tx.createdAt)}</p>{tx.message&&<p className="mt-1 text-sm text-muted-foreground">{tx.message}</p>}</div></div>)}{userTransactions.length===0&&<p className="py-5 text-sm text-muted-foreground">No recorded transactions yet.</p>}</CardContent></Card>}
             </>
           )}
 
@@ -420,9 +422,11 @@ export function ProfileView() {
                           {QUOTATION_LABELS[q.status] ?? q.status}
                         </Badge>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {q.materials} · {q.quantity} · {q.timeline}
-                      </p>
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        {parseQuotationItems(q.materials).length ? parseQuotationItems(q.materials).map((item) => <div key={item.materialId} className="flex justify-between gap-3"><span>{item.materialName} · {item.quantity} {item.unit}<span className="block text-xs">{formatUnitPrice(item.price)} / {item.unit}</span></span><span>{formatUnitPrice(item.subtotal ?? (item.price ?? 0) * item.quantity)}</span></div>) : <p>{q.materials}</p>}
+                        <p>{q.quantity} · {q.timeline}</p>
+                        {parseQuotationItems(q.materials).length > 0 && <p className="flex justify-between border-t pt-2 font-semibold text-foreground"><span>Quotation total</span><span>{formatUnitPrice(q.totalAmount || parseQuotationItems(q.materials).reduce((sum,item)=>sum+(item.subtotal ?? (item.price ?? 0)*item.quantity),0))}</span></p>}
+                      </div>
                       {q.customerChangeRequest && q.status === "changes-requested" && (
                         <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
                           <span className="font-medium">Your requested changes: </span>
@@ -541,9 +545,7 @@ export function ProfileView() {
                             {order.status}
                           </Badge>
                         </div>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {order.materials} · {order.quantity}
-                        </p>
+                        <div className="mt-3 space-y-2 text-sm">{parseQuotationItems(order.materials).length ? parseQuotationItems(order.materials).map((item)=><div key={item.materialId} className="flex justify-between gap-4"><span>{item.materialName} · {item.quantity} {item.unit}<span className="block text-xs text-muted-foreground">{formatUnitPrice(item.price)} / {item.unit}</span></span><span>{formatUnitPrice(item.subtotal ?? (item.price ?? 0)*item.quantity)}</span></div>) : <p className="text-muted-foreground">{order.materials} · {order.quantity}</p>}<p className="flex justify-between border-t pt-2 font-semibold"><span>Order total</span><span>{formatUnitPrice(order.totalAmount || parseQuotationItems(order.materials).reduce((sum,item)=>sum+(item.subtotal ?? (item.price ?? 0)*item.quantity),0))}</span></p></div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {[order.deliveryMethod, order.paymentMethod]
                             .filter(Boolean)
@@ -681,6 +683,30 @@ export function ProfileView() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {tab === "transactions" && roleIsUser && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader><CardTitle>Transactions</CardTitle><CardDescription>Order confirmations and status updates for your account.</CardDescription></CardHeader>
+                <CardContent className="space-y-3">
+                  {userTransactions.length === 0 ? <p className="py-5 text-sm text-muted-foreground">No transactions recorded yet.</p> : userTransactions.map((transaction) => (
+                    <div key={transaction.id} className="rounded-2xl border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2"><p className="font-medium">{transaction.title}</p><Badge variant="outline">{transaction.status}</Badge></div>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDate(transaction.createdAt)}</p>
+                      {transaction.message && <p className="mt-2 text-sm text-muted-foreground">{transaction.message}</p>}
+                      {typeof transaction.metadata?.totalAmount === "number" && <p className="mt-2 font-medium">{formatMoney(transaction.metadata.totalAmount)}</p>}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle>Delivery receipts</CardTitle><CardDescription>Receipts attached to your orders.</CardDescription></CardHeader>
+                <CardContent className="space-y-2">
+                  {receipts.filter((receipt) => userOrders.some((order) => receipt.orderId === order.id || receipt.orderNumber === order.orderNo || receipt.orderNumber === order.id)).length === 0 ? <p className="py-3 text-sm text-muted-foreground">No delivery receipts yet.</p> : receipts.filter((receipt) => userOrders.some((order) => receipt.orderId === order.id || receipt.orderNumber === order.orderNo || receipt.orderNumber === order.id)).map((receipt) => <div key={receipt.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"><div><p className="font-medium">{receipt.drNumber}</p><p className="text-xs text-muted-foreground">{receipt.orderNumber} · {receipt.status} · {formatDate(receipt.date)}</p></div><div className="flex items-center gap-3"><span className="text-sm font-medium">{formatMoney(receipt.totalAmount)}</span><DeliveryReceiptDialog receipt={receipt} /></div></div>)}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {tab === "notifications" && (

@@ -1,7 +1,7 @@
 "use client";
 import { deleteRecord, makeId, updateRecord, useDbCollection, apiRequest, refreshCollection } from "@/lib/db-client";
 export type MaterialStatus = "Available" | "Limited" | "Unavailable";
-export type Material = { id:string; sku:string; name:string; category:string; unit:string; quantity:number; minimumStock:number; status:MaterialStatus; imageUrl?:string|null; createdAt:string };
+export type Material = { id:string; sku:string; name:string; category:string; unit:string; quantity:number; minimumStock:number; unitPrice:number; status:MaterialStatus; imageUrl?:string|null; createdAt:string };
 export function useMaterials(): Material[] { return useDbCollection<Material>("materials"); }
 export async function addMaterial(input: Omit<Material,"id"|"createdAt"> & {id?:string;imageData?:string}) {
   const {imageData,...details}=input;
