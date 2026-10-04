@@ -7,6 +7,7 @@ import { motion, type Variants } from "motion/react";
 import { Button } from "@/components/ui/button";
 import RoundCarousel from "@/components/originkit/ui/roundcarousel-custom-style";
 import { VehicleDescendSection } from "@/components/customer/scene3d/vehicle-scroll-section";
+import { MaterialsCarouselSection } from "@/components/customer/scene3d/materials-carousel-section";
 import { WorkerCalloutSection } from "@/components/customer/worker-callout-section";
 
 const fadeUp: Variants = {
@@ -47,12 +48,6 @@ const HERO_RING_IMAGES = [
   { src: "/cement.webp" },
   { src: "/img8.png" },
 ];
-
-const MATERIAL_PREVIEW = [
-  { src: "/steel bars.jpg", rotate: -6 },
-  { src: "/cement.webp", rotate: 0 },
-  { src: "/lumber.jpg", rotate: 6 },
-] as const;
 
 export function CustomerHomeSections() {
   return (
@@ -415,73 +410,7 @@ export function CustomerHomeSections() {
           MATERIALS SECTION
           ========================================================= */}
 
-      <section className="bg-white px-6 py-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <Image
-            src="/brand/materials.png"
-            alt="Materials"
-            width={1440}
-            height={369}
-            className="
-              mx-auto
-              h-auto
-              w-full
-              max-w-2xl
-            "
-          />
-        </div>
-
-        <div
-          className="
-            mx-auto
-            mt-14
-            flex
-            max-w-3xl
-            items-center
-            justify-center
-            gap-4
-          "
-        >
-          {MATERIAL_PREVIEW.map((item, i) => (
-            <div
-              key={item.src}
-              className="
-                overflow-hidden
-                rounded-xl
-                border
-                border-black/10
-                shadow-lg
-              "
-              style={{
-                transform: `rotate(${item.rotate}deg)`,
-                width: i === 1 ? 220 : 160,
-                height: i === 1 ? 280 : 220,
-                zIndex: i === 1 ? 10 : 1,
-                marginTop: i === 1 ? 0 : 30,
-              }}
-            >
-              <div
-                className="
-                  h-full
-                  w-full
-                  bg-cover
-                  bg-center
-                "
-                style={{
-                  backgroundImage: `url('${item.src}')`,
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 flex justify-center">
-          <Button
-            size="lg"
-            render={<Link href="/materials">Browse Materials</Link>}
-          />
-        </div>
-      </section>
+      <MaterialsCarouselSection />
 
       {/* =========================================================
           WORKER CALLOUT

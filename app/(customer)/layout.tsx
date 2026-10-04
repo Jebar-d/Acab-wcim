@@ -104,10 +104,6 @@ export default function CustomerLayout({
               Home
             </Link>
 
-            <Link href="/materials" className="transition hover:text-black">
-              Materials
-            </Link>
-
             <Link href="/about" className="transition hover:text-black">
               About
             </Link>
@@ -382,19 +378,6 @@ export default function CustomerLayout({
                     text-sm
                     hover:bg-black/5
                   "
-                  href="/materials"
-                >
-                  Materials
-                </Link>
-
-                <Link
-                  className="
-                    rounded-xl
-                    px-3
-                    py-2
-                    text-sm
-                    hover:bg-black/5
-                  "
                   href="/about"
                 >
                   About
@@ -564,7 +547,7 @@ export default function CustomerLayout({
 
             <Link href="/about">About</Link>
 
-            <Link href="/materials">Materials</Link>
+            <Link href="/#materials">Materials</Link>
 
             <Link href="/faq">FAQ</Link>
           </div>

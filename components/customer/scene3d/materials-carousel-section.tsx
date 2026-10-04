@@ -40,7 +40,7 @@ const MATERIAL_INFO = [
 const SCROLL_LENGTHS_PER_ITEM = 0.9; // viewport-heights of scroll per carousel item
 
 export function MaterialsCarouselSection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const progressRef = useRef(0);
   const activeIndexRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -84,20 +84,21 @@ export function MaterialsCarouselSection() {
 
   return (
     <section
+      id="materials"
       ref={sectionRef}
       className="relative w-screen"
       style={{
-        height: `${heightVh}vh`,
+        height: `calc(${heightVh}vh - 4rem)`,
         marginLeft: "calc(50% - 50vw)",
         marginRight: "calc(50% - 50vw)",
       }}
     >
       <div
-        className="sticky top-0 h-screen w-full overflow-hidden bg-[#faf9f5]"
+        className="sticky top-16 h-[calc(100vh-4rem)] w-full overflow-hidden bg-[#faf9f5]"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <div className="pointer-events-none absolute left-1/2 top-10 -translate-x-1/2">
+        <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2">
           <Image
             src="/brand/materials.png"
             alt="Materials"
@@ -128,7 +129,7 @@ export function MaterialsCarouselSection() {
           </p>
         </div>
 
-        <div className="pointer-events-none absolute bottom-12 left-1/2 flex -translate-x-1/2 gap-2">
+        <div className="pointer-events-none absolute bottom-8 left-1/2 flex -translate-x-1/2 gap-2">
           {MATERIAL_INFO.map((m, i) => (
             <span
               key={m.name}

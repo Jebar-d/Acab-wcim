@@ -118,7 +118,7 @@ function mapRow(string $entity, array $row): array {
     case 'stock_out': return ['id'=>$row['id'],'stockOutId'=>$row['stock_out_id'],'sku'=>$row['sku'],'material'=>$row['material'],'quantity'=>(float)$row['quantity'],'orderRef'=>$row['order_ref'],'destination'=>$row['destination'],'warehouseStaff'=>$row['warehouse_staff'],'date'=>$row['date'],'status'=>$row['status'],'createdAt'=>$row['created_at']];
     case 'checklists': return ['id'=>$row['id'],'quotationId'=>$row['quotation_id']??null,'title'=>$row['title'],'status'=>$row['status'],'items'=>$row['items_json']?json_decode($row['items_json'],true):[],'createdAt'=>$row['created_at']];
     case 'checklist_items': return ['id'=>$row['id'],'checklistId'=>$row['checklist_id'],'label'=>$row['label'],'completed'=>boolish($row['completed']),'createdAt'=>$row['created_at']];
-    case 'ledger_entries': return ['id'=>$row['id'],'source'=>$row['source'],'reference'=>$row['reference'],'description'=>$row['description'],'amount'=>(float)$row['amount'],'date'=>$row['date_value']?:$row['created_at'],'party'=>$row['party'],'project'=>$row['project'],'status'=>$row['status'],'sourceId'=>$row['source_id'],'createdAt'=>$row['created_at']];
+    case 'ledger_entries': return ['id'=>$row['id'],'type'=>$row['type'],'source'=>$row['source'],'reference'=>$row['reference'],'description'=>$row['description'],'amount'=>(float)$row['amount'],'date'=>$row['date_value']?:$row['created_at'],'party'=>$row['party'],'project'=>$row['project'],'status'=>$row['status'],'sourceId'=>$row['source_id'],'createdAt'=>$row['created_at']];
     case 'notifications': return ['id'=>$row['id'],'audience'=>$row['audience'],'accountId'=>$row['account_id'],'title'=>$row['title'],'body'=>$row['body'],'createdAt'=>$row['created_at'],'read'=>!!$row['read_at'],'href'=>$row['href']];
     case 'transactions': return ['id'=>$row['id'],'orderId'=>$row['order_id'],'accountId'=>$row['account_id'],'actorUserId'=>$row['actor_user_id'],'actorRole'=>$row['actor_role'],'type'=>$row['type'],'status'=>$row['status'],'title'=>$row['title'],'message'=>$row['message'],'metadata'=>$row['metadata'] ? json_decode($row['metadata'], true) : null,'createdAt'=>$row['created_at']];
     case 'addresses': return ['id'=>$row['id'],'userId'=>$row['user_id'],'label'=>$row['label'],'recipientName'=>$row['recipient_name'],'phone'=>$row['phone'],'line1'=>$row['line1'],'line2'=>$row['line2'],'barangay'=>$row['barangay'],'city'=>$row['city'],'province'=>$row['province'],'postalCode'=>$row['postal_code'],'isDefault'=>!!$row['is_default'],'createdAt'=>$row['created_at']];
@@ -305,6 +305,42 @@ function decodeItemList(mixed $raw): array {
     $value=$decoded;
   }
   return is_array($value)?array_values(array_filter($value,'is_array')):[];
+}
+
+function validateLinkedLedgerPayment(PDO $pdo,string $type,string $sourceId,float $amount,?string $excludeId=null): void {
+  if ($sourceId==='' || !in_array($type,['Customer Payment','Supplier Payment'],true)) return;
+  $table=$type==='Customer Payment'?'orders':'purchase_orders';
+  $source=$pdo->prepare("SELECT total_amount FROM `$table` WHERE id=? FOR UPDATE");
+  $source->execute([$sourceId]);
+  $record=$source->fetch();
+  if (!$record) throw new RuntimeException($type==='Customer Payment'?'The linked customer order no longer exists.':'The linked purchase order no longer exists.');
+  $sql="SELECT COALESCE(SUM(amount),0) FROM ledger_entries WHERE type=? AND source_id=? AND status='Posted'";
+  $params=[$type,$sourceId];
+  if ($excludeId!==null) { $sql.=' AND id<>?'; $params[]=$excludeId; }
+  $paid=$pdo->prepare($sql); $paid->execute($params);
+  $remaining=max(0,(float)$record['total_amount']-(float)$paid->fetchColumn());
+  if ($amount>$remaining+0.009) throw new RuntimeException('This payment exceeds the linked record’s remaining balance of PHP '.number_format($remaining,2).'.');
+}
+
+function recordDeliveredOrderLedgerEntry(PDO $pdo,array $order): void {
+  $orderId=(string)$order['id'];
+  $existing=$pdo->prepare("SELECT id FROM ledger_entries WHERE type='Customer Payment' AND source='Delivery Receipt' AND source_id=? LIMIT 1");
+  $existing->execute([$orderId]);
+  if ($existing->fetchColumn()) return;
+
+  $orderTotal=max(0,(float)($order['total_amount']??0));
+  if ($orderTotal<=0) return;
+  $paid=$pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM ledger_entries WHERE type='Customer Payment' AND source_id=? AND status='Posted'");
+  $paid->execute([$orderId]);
+  $amount=round(max(0,$orderTotal-(float)$paid->fetchColumn()),2);
+  if ($amount<=0) return;
+
+  $orderReference=(string)($order['order_no']?:$orderId);
+  $paymentMethod=trim((string)($order['payment_method']??''));
+  $description='Customer payment recorded when the order was delivered'.($paymentMethod!==''?' via '.$paymentMethod:'').'.';
+  $now=now();
+  $entry=$pdo->prepare('INSERT INTO ledger_entries (id,type,reference,description,amount,date_value,party,project,status,source,source_id,debit,credit,balance,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+  $entry->execute([cleanId(),'Customer Payment',$orderReference,$description,$amount,gmdate('Y-m-d'),$order['client_name']??'Customer',$order['project_name']??null,'Posted','Delivery Receipt',$orderId,0,0,0,$now,$now]);
 }
 
 /** Resolve quotation lines from inventory and take authoritative price snapshots. */
@@ -544,7 +580,17 @@ if ($action==='create') {
         $st=$pdo->prepare('INSERT INTO stock_out (id,stock_out_id,sku,material,quantity,order_ref,destination,warehouse_staff,date,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'stockOutId'),$materialRow['sku'],$materialRow['name'],$quantity,val($r,'orderRef'),val($r,'destination'),$current['name'],val($r,'date',gmdate('Y-m-d')),'Draft',$n,$n]); break;
       case 'checklists': $st=$pdo->prepare('INSERT INTO checklists (id,quotation_id,title,status,items_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'quotationId'),val($r,'title'),val($r,'status','Checklist Pending'),isset($r['items'])?json_encode($r['items']):'[]',val($r,'createdAt',$n),$n]); break;
       case 'checklist_items': $st=$pdo->prepare('INSERT INTO checklist_items (id,checklist_id,label,completed,created_at,updated_at) VALUES (?,?,?,?,?,?)'); $st->execute([$id,val($r,'checklistId'),val($r,'label'),boolish(val($r,'completed')),val($r,'createdAt',$n),$n]); break;
-      case 'ledger_entries': $st=$pdo->prepare('INSERT INTO ledger_entries (id,type,reference,description,amount,date_value,party,project,status,source,source_id,debit,credit,balance,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'type','Project Transaction'),val($r,'reference'),val($r,'description'),val($r,'amount',0),val($r,'date',gmdate('Y-m-d')),val($r,'party'),val($r,'project'),val($r,'status','Posted'),val($r,'source'),val($r,'sourceId'),val($r,'debit',0),val($r,'credit',0),val($r,'balance',0),val($r,'createdAt',$n),$n]); break;
+      case 'ledger_entries':
+        $amount=(float)val($r,'amount',0);
+        if (!is_finite($amount) || $amount<=0) throw new RuntimeException('Ledger amount must be greater than zero.');
+        $type=(string)val($r,'type','Project Transaction'); $sourceId=(string)val($r,'sourceId','');
+        if ($sourceId!=='' && in_array($type,['Customer Payment','Supplier Payment'],true)) {
+          $pdo->beginTransaction();
+          validateLinkedLedgerPayment($pdo,$type,$sourceId,$amount);
+        }
+        $st=$pdo->prepare('INSERT INTO ledger_entries (id,type,reference,description,amount,date_value,party,project,status,source,source_id,debit,credit,balance,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $st->execute([$id,$type,val($r,'reference'),val($r,'description'),round($amount,2),val($r,'date',gmdate('Y-m-d')),val($r,'party'),val($r,'project'),val($r,'status','Posted'),val($r,'source'),$sourceId?:null,0,0,0,val($r,'createdAt',$n),$n]);
+        break;
       case 'notifications': $st=$pdo->prepare('INSERT INTO notifications (id,audience,account_id,title,body,created_at,read_at,href) VALUES (?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'audience'),val($r,'accountId'),val($r,'title'),val($r,'body'),val($r,'createdAt',$n),val($r,'read')? $n:null,val($r,'href')]); break;
       case 'transactions': $st=$pdo->prepare('INSERT INTO transactions (id,order_id,account_id,actor_user_id,actor_role,type,status,title,message,metadata,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'orderId'),val($r,'accountId',$current['role']==='user'?$current['id']:null),val($r,'actorUserId',$current['id']),val($r,'actorRole',$current['role']),val($r,'type'),val($r,'status'),val($r,'title'),val($r,'message'),isset($r['metadata'])?json_encode($r['metadata']):null,val($r,'createdAt',$n)]); break;
       case 'addresses': $st=$pdo->prepare('INSERT INTO addresses (id,user_id,label,recipient_name,phone,line1,line2,barangay,city,province,postal_code,is_default,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'); $st->execute([$id,val($r,'userId',$current['id']),val($r,'label','Primary'),val($r,'recipientName',$current['name']),val($r,'phone'),val($r,'line1'),val($r,'line2'),val($r,'barangay'),val($r,'city'),val($r,'province'),val($r,'postalCode'),boolish(val($r,'isDefault')),val($r,'createdAt',$n),$n]); break;
@@ -552,7 +598,7 @@ if ($action==='create') {
     if ($entity==='orders') {
       try { assignOrderNumber($pdo,$id); syncDeliveryReceipt($pdo,$id); } catch (Throwable $e) { /* never block the order */ }
     }
-    if ($entity==='stock_in' && $pdo->inTransaction()) $pdo->commit();
+    if (in_array($entity,['stock_in','ledger_entries'],true) && $pdo->inTransaction()) $pdo->commit();
     $st=$pdo->prepare("SELECT * FROM `$table` WHERE id=?"); $st->execute([$id]); $row=$st->fetch(); if (!$row) jsonResponse(false,null,'Record could not be created.',500); jsonResponse(true,mapRow($entity,$row));
   } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); if ($savedMaterialImage) deleteMaterialImageFile($savedMaterialImage); jsonResponse(false,null,$e->getMessage(),422); }
 }
@@ -569,7 +615,7 @@ if ($action==='update') {
     'stock_in'=>['stockInId'=>'stock_in_id','reference'=>'stock_in_id','sku'=>'sku','material'=>'material','quantity'=>'quantity','supplier'=>'supplier','receivedBy'=>'received_by','date'=>'date','status'=>'status'],
     'stock_out'=>['stockOutId'=>'stock_out_id','sku'=>'sku','material'=>'material','quantity'=>'quantity','orderRef'=>'order_ref','destination'=>'destination','warehouseStaff'=>'warehouse_staff','date'=>'date','status'=>'status'],
     'checklists'=>['quotationId'=>'quotation_id','title'=>'title','status'=>'status','items'=>'items_json'], 'checklist_items'=>['checklistId'=>'checklist_id','label'=>'label','completed'=>'completed'],
-    'ledger_entries'=>['type'=>'type','reference'=>'reference','description'=>'description','debit'=>'debit','credit'=>'credit','balance'=>'balance','source'=>'source','sourceId'=>'source_id'],
+    'ledger_entries'=>['type'=>'type','reference'=>'reference','description'=>'description','amount'=>'amount','date'=>'date_value','party'=>'party','project'=>'project','status'=>'status','source'=>'source','sourceId'=>'source_id'],
     'notifications'=>['title'=>'title','body'=>'body','href'=>'href','read'=>'read_at'],
     'transactions'=>['status'=>'status','title'=>'title','message'=>'message','metadata'=>'metadata'],
     'addresses'=>['label'=>'label','recipientName'=>'recipient_name','phone'=>'phone','line1'=>'line1','line2'=>'line2','barangay'=>'barangay','city'=>'city','province'=>'province','postalCode'=>'postal_code','isDefault'=>'is_default'],
@@ -643,11 +689,30 @@ if ($action==='update') {
     if (!is_finite($amount) || $amount<0) jsonResponse(false,null,'Transaction total cannot be negative.',422);
     $patch['totalAmount']=round($amount,2);
   }
+  if ($entity==='ledger_entries' && array_key_exists('amount',$patch)) {
+    $amount=(float)$patch['amount'];
+    if (!is_finite($amount) || $amount<=0) jsonResponse(false,null,'Ledger amount must be greater than zero.',422);
+    $patch['amount']=round($amount,2);
+  }
+  if ($entity==='ledger_entries') {
+    $pdo->beginTransaction();
+    $currentLedgerStmt=$pdo->prepare('SELECT type,source_id,amount FROM ledger_entries WHERE id=? FOR UPDATE');
+    $currentLedgerStmt->execute([$id]);
+    $currentLedger=$currentLedgerStmt->fetch();
+    if (!$currentLedger) jsonResponse(false,null,'Ledger entry not found.',404);
+    $nextType=(string)val($patch,'type',$currentLedger['type']);
+    $nextSourceId=(string)val($patch,'sourceId',$currentLedger['source_id']??'');
+    $nextAmount=(float)val($patch,'amount',$currentLedger['amount']);
+    if ($nextSourceId!=='' && in_array($nextType,['Customer Payment','Supplier Payment'],true)) {
+      try { validateLinkedLedgerPayment($pdo,$nextType,$nextSourceId,$nextAmount,$id); }
+      catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); jsonResponse(false,null,$e->getMessage(),422); }
+    }
+  }
   $sets=[];$params=[];
   foreach($patch as $k=>$v){ if(!isset($mapped[$k])) continue; $sets[]='`'.$mapped[$k].'`=?'; if($entity==='notifications' && $k==='read') $v=$v?now():null; if(in_array($k,['completed','isDefault','notificationEmail'],true)) $v=boolish($v); if($k==='metadata' || $k==='items') $v=json_encode($v); $params[]=$v; }
   if (!$sets) jsonResponse(false,null,'No editable fields supplied.',422); $sets[]='updated_at=?'; $params[]=now(); $params[]=$id;
-  try { $st=$pdo->prepare("UPDATE `$table` SET ".implode(',',$sets)." WHERE id=?"); $st->execute($params); $st=$pdo->prepare("SELECT * FROM `$table` WHERE id=?"); $st->execute([$id]); $row=$st->fetch(); if(!$row) { if ($newMaterialImage) deleteMaterialImageFile($newMaterialImage); jsonResponse(false,null,'Record not found.',404); } }
-  catch (Throwable $e) { if ($newMaterialImage) deleteMaterialImageFile($newMaterialImage); throw $e; }
+  try { $st=$pdo->prepare("UPDATE `$table` SET ".implode(',',$sets)." WHERE id=?"); $st->execute($params); $st=$pdo->prepare("SELECT * FROM `$table` WHERE id=?"); $st->execute([$id]); $row=$st->fetch(); if(!$row) { if ($newMaterialImage) deleteMaterialImageFile($newMaterialImage); jsonResponse(false,null,'Record not found.',404); } if ($entity==='ledger_entries' && $pdo->inTransaction()) $pdo->commit(); }
+  catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); if ($newMaterialImage) deleteMaterialImageFile($newMaterialImage); throw $e; }
   if (($newMaterialImage || $removeMaterialImage) && $oldMaterialImage) deleteMaterialImageFile($oldMaterialImage);
   if ($entity==='quotations' && ($patch['status']??null)==='cancelled' && $current['role']==='user') {
     $body="{$current['name']} cancelled quotation #".substr($id,0,8)." for {$row['project_name']}.";
@@ -714,7 +779,9 @@ if ($action==='transaction_status') {
   $orderId=(string)($input['orderId']??''); $status=(string)($input['status']??''); $message=trim((string)($input['message']??''));
   if(!$orderId||!$status) jsonResponse(false,null,'Order and status are required.',422);
 
-  $ord=$pdo->prepare('SELECT * FROM orders WHERE id=?');
+  $pdo->beginTransaction();
+  try {
+  $ord=$pdo->prepare('SELECT * FROM orders WHERE id=? FOR UPDATE');
   $ord->execute([$orderId]);
   $order=$ord->fetch();
   if (!$order) jsonResponse(false,null,'Order not found.',404);
@@ -740,6 +807,7 @@ if ($action==='transaction_status') {
 
   $st=$pdo->prepare('UPDATE orders SET status=?, updated_at=? WHERE id=?');
   $st->execute([$status,now(),$orderId]);
+  if ($status==='Delivered') recordDeliveredOrderLedgerEntry($pdo,$order);
   if ($current['role']==='user' && $status==='Cancelled' && $order['quotation_id']) {
     $cancelQuote=$pdo->prepare("UPDATE quotations SET status='cancelled',cancelled_at=?,cancelled_by=?,cancel_reason=?,updated_at=? WHERE id=?");
     $cancelQuote->execute([now(),$current['id'],$message?:'Customer cancelled the order.',now(),$order['quotation_id']]);
@@ -780,7 +848,12 @@ if ($action==='transaction_status') {
     }
   }
   try { syncDeliveryReceipt($pdo,$orderId); } catch (Throwable $e) { error_log('Could not refresh delivery receipt: '.$e->getMessage()); }
+  $pdo->commit();
   jsonResponse(true,true);
+  } catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    jsonResponse(false,null,$e->getMessage(),422);
+  }
 }
 
 jsonResponse(false,null,'Unsupported action.',400);

@@ -1,9 +1,5 @@
-import { MaterialsCarouselSection } from "@/components/customer/scene3d/materials-carousel-section";
+import { redirect } from "next/navigation";
 
 export default function MaterialsPage() {
-  return (
-    <main>
-      <MaterialsCarouselSection />
-    </main>
-  );
+  redirect("/#materials");
 }
