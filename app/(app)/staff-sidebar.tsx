@@ -17,6 +17,7 @@ import {
   Truck,
   User,
   Warehouse,
+  type LucideIcon,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import type { BreadcrumbEntry } from "@/lib/nav";
@@ -49,7 +50,7 @@ import { NotificationsMenu } from "@/components/ui/notifications-menu";
 type StaffSubItem = { title: string; url: string };
 type StaffNavItem = {
   title: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   url?: string;
   items?: StaffSubItem[];
 };
@@ -166,6 +167,7 @@ export function StaffSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {staffNav.map((item) => {
+                const Icon = item.icon;
                 if (!item.items) {
                   return (
                     <SidebarMenuItem key={item.title}>
@@ -173,7 +175,7 @@ export function StaffSidebar() {
                         isActive={pathname === item.url}
                         render={
                           <a href={item.url}>
-                            <item.icon className="size-4" />
+                            <Icon className="size-4" />
                             <span>{item.title}</span>
                           </a>
                         }
@@ -186,7 +188,7 @@ export function StaffSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton onClick={() => toggleGroup(item.title)}>
-                      <item.icon className="size-4" />
+                      <Icon className="size-4" />
                       <span>{item.title}</span>
                       <ChevronRight
                         className={cn(

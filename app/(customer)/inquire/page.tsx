@@ -1,22 +1,22 @@
 "use client";
 
 import { useState } from "react";
+
+import { useRouter } from "next/navigation";
+
 import { toast } from "sonner";
 
 import { createInquiry } from "@/lib/inquiries-store";
-
 import { createQuotation } from "@/lib/quotations-store";
-
 import { useSession } from "@/lib/auth-store";
-
 import { ensureClientForAccount } from "@/lib/clients-store";
+import { addNotification } from "@/lib/notifications-store";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
 import { Skeleton } from "@/components/ui/skeleton";
 
 import {
@@ -29,227 +29,299 @@ import {
 
 export default function InquirePage() {
   const session = useSession();
+  const router = useRouter();
 
   const [projectType, setProjectType] = useState("Residential");
-
   const [submitted, setSubmitted] = useState(false);
-
   const [saving, setSaving] = useState(false);
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!session) {
       toast.error("Please sign in before requesting a quotation.");
-
       return;
     }
 
     setSaving(true);
 
-    const data = new FormData(event.currentTarget);
+    try {
+      const data = new FormData(event.currentTarget);
 
-    const project = String(data.get("project") ?? "").trim();
+      const project = String(data.get("project") ?? "").trim();
+      const location = String(data.get("location") ?? "").trim();
+      const materials = String(data.get("materials") ?? "").trim();
+      const quantity = String(data.get("quantity") ?? "").trim();
+      const timeline = String(data.get("timeline") ?? "").trim();
+      const email = String(data.get("customerEmail") ?? session.email ?? "").trim();
+      const phone = String(data.get("customerPhone") ?? "").trim();
+      const notes = String(data.get("notes") ?? "").trim();
 
-    const location = String(data.get("location") ?? "").trim();
+      if (!project || !location || !materials || !quantity || !timeline) {
+        toast.error("Please fill in all required quotation details before submitting.");
+        return;
+      }
 
-    const materials = String(data.get("materials") ?? "").trim();
+      const client = ensureClientForAccount({
+        id: session.id,
+        name: session.name,
+        email: session.email,
+      });
 
-    const quantity = String(data.get("quantity") ?? "").trim();
+      const inquiry = await createInquiry({
+        accountId: session.id,
+        project,
+        projectType,
+        location,
+        materials,
+        quantity,
+        timeline,
+        notes,
+      });
 
-    const timeline = String(data.get("timeline") ?? "").trim();
+      await createQuotation({
+        inquiryId: inquiry.id,
+        clientId: client.id,
+        accountId: session.id,
+        customerName: session.name,
+        customerEmail: email,
+        customerPhone: phone,
+        projectName: project,
+        projectType,
+        location,
+        materials,
+        quantity,
+        timeline,
+        notes,
+        status: "pending",
+        checklistStatus: "Pending Review",
+      });
 
-    const notes = String(data.get("notes") ?? "").trim();
+      addNotification({
+        audience: "staff",
+        title: "New quotation request",
+        body: `${session.name} requested a quote for ${project}.`,
+        href: "/staff/quotations",
+      });
 
-    /*
-     * Automatically create/update the client.
-     */
-    const client = ensureClientForAccount({
-      id: session.id,
-      name: session.name,
-      email: session.email,
-    });
+      addNotification({
+        audience: "admin",
+        title: "New quotation request",
+        body: `${session.name} submitted a quotation request for ${project}.`,
+        href: "/dashboard",
+      });
 
-    /*
-     * Create the customer inquiry.
-     */
-    const inquiry = createInquiry({
-      accountId: session.id,
-      project,
-      projectType,
-      location,
-      materials,
-      quantity,
-      timeline,
-      notes,
-    });
-
-    /*
-     * Create the staff quotation record.
-     */
-    createQuotation({
-      inquiryId: inquiry.id,
-      clientId: client.id,
-      accountId: session.id,
-
-      customerName: session.name,
-
-      projectName: project,
-      projectType,
-      location,
-
-      materials,
-      quantity,
-      timeline,
-      notes,
-
-      status: "pending",
-
-      checklistStatus: "Pending Review",
-    });
-
-    setSubmitted(true);
-    setSaving(false);
-
-    toast.success("Quotation request received.");
+      setSubmitted(true);
+      toast.success("Quotation request received.");
+      router.push("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not submit quotation request.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (saving) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-20">
-        <Skeleton className="h-10 w-72" />
-
-        <Skeleton className="mt-8 h-64 w-full" />
-      </div>
+      <main className="min-h-screen bg-[#0e0e0d] px-6 py-20 text-white">
+        <div className="mx-auto max-w-2xl">
+          <Skeleton className="h-10 w-72 bg-white/10" />
+          <Skeleton className="mt-8 h-64 w-full bg-white/10" />
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-20">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-        Order / quotation
-      </p>
+    <main className="min-h-screen bg-[#0e0e0d] text-white">
+      <section className="px-6 py-20">
+        <div className="mx-auto max-w-2xl">
+          {/* Page heading */}
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
+            Request a quotation
+          </p>
 
-      <h1 className="mt-4 text-5xl font-semibold tracking-tight">
-        Tell us what you&apos;re building.
-      </h1>
+          <h1 className="mt-4 text-5xl font-semibold tracking-tight text-white">
+            Tell us what you&apos;re building.
+          </h1>
 
-      <p className="mt-3 text-sm text-muted-foreground">
-        Submit your project requirements and materials. Our staff will review
-        inventory and confirm the quotation.
-      </p>
+          <p className="mt-3 text-sm leading-6 text-white/60">
+            Submit your project requirements and materials. Our staff will
+            review inventory and confirm the quotation.
+          </p>
 
-      {submitted ? (
-        <Alert className="mt-10">
-          <AlertDescription>
-            Your quotation request was submitted successfully. You will receive
-            a notification after our staff confirms the quotation.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <form
-          onSubmit={submit}
-          className="mt-10 flex flex-col gap-4 rounded-2xl border border-border p-6"
-        >
-          <div>
-            <Label>Project type</Label>
+          {submitted ? (
+            <Alert className="mt-10 border-white/10 bg-white/5 text-white">
+              <AlertDescription className="text-white/80">
+                Your quotation request was submitted successfully. You will
+                receive a notification after our staff confirms the quotation.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form
+              noValidate
+              onSubmit={submit}
+              className="mt-10 flex flex-col gap-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6"
+            >
+              {/* Project Type */}
+              <div>
+                <Label className="text-white">Project type</Label>
 
-            <Select value={projectType} onValueChange={(value) => setProjectType(value ?? "")}>
-              <SelectTrigger className="mt-1.5 w-full">
-                <SelectValue placeholder="Select project type" />
-              </SelectTrigger>
+                <Select
+                  value={projectType}
+                  onValueChange={(value) => setProjectType(value ?? "")}
+                >
+                  <SelectTrigger className="mt-1.5 w-full border-white/10 bg-white/10 text-white">
+                    <SelectValue placeholder="Select project type" />
+                  </SelectTrigger>
 
-              <SelectContent>
-                <SelectItem value="Residential">Residential</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="Residential">Residential</SelectItem>
 
-                <SelectItem value="Commercial">Commercial</SelectItem>
+                    <SelectItem value="Commercial">Commercial</SelectItem>
 
-                <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                    <SelectItem value="Infrastructure">
+                      Infrastructure
+                    </SelectItem>
 
-                <SelectItem value="Renovation">Renovation</SelectItem>
+                    <SelectItem value="Renovation">Renovation</SelectItem>
 
-                <SelectItem value="Industrial">Industrial</SelectItem>
+                    <SelectItem value="Industrial">Industrial</SelectItem>
 
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <Label htmlFor="project">Project name</Label>
+              {/* Project Name */}
+              <div>
+                <Label htmlFor="project" className="text-white">
+                  Project name
+                </Label>
 
-            <Input
-              id="project"
-              name="project"
-              required
-              className="mt-1.5"
-              placeholder="Example: Riverside Housing Project"
-            />
-          </div>
+                <Input
+                  id="project"
+                  name="project"
+                  required
+                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                  placeholder="Example: Riverside Housing Project"
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="location">Project location</Label>
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="customerEmail" className="text-white">
+                    Email
+                  </Label>
+                  <Input
+                    id="customerEmail"
+                    name="customerEmail"
+                    type="email"
+                    defaultValue={session?.email ?? ""}
+                    className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                    placeholder="you@example.com"
+                  />
+                </div>
 
-            <Input
-              id="location"
-              name="location"
-              required
-              className="mt-1.5"
-              placeholder="Example: Cebu City"
-            />
-          </div>
+                <div>
+                  <Label htmlFor="customerPhone" className="text-white">
+                    Contact number
+                  </Label>
+                  <Input
+                    id="customerPhone"
+                    name="customerPhone"
+                    className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                    placeholder="+63 917 000 0000"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <Label htmlFor="materials">Materials needed</Label>
+              {/* Project Location */}
+              <div>
+                <Label htmlFor="location" className="text-white">
+                  Project location
+                </Label>
 
-            <Input
-              id="materials"
-              name="materials"
-              required
-              className="mt-1.5"
-              placeholder="Example: Cement, Rebar, Sand"
-            />
-          </div>
+                <Input
+                  id="location"
+                  name="location"
+                  required
+                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                  placeholder="Example: Cebu City"
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="quantity">Quantity</Label>
+              {/* Materials */}
+              <div>
+                <Label htmlFor="materials" className="text-white">
+                  Materials needed
+                </Label>
 
-            <Input
-              id="quantity"
-              name="quantity"
-              required
-              className="mt-1.5"
-              placeholder="Example: 50 bags, 100 pieces"
-            />
-          </div>
+                <Input
+                  id="materials"
+                  name="materials"
+                  required
+                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                  placeholder="Example: Cement, Rebar, Sand"
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="timeline">Required timeline</Label>
+              {/* Quantity */}
+              <div>
+                <Label htmlFor="quantity" className="text-white">
+                  Quantity
+                </Label>
 
-            <Input
-              id="timeline"
-              name="timeline"
-              required
-              className="mt-1.5"
-              placeholder="Example: Within 2 weeks"
-            />
-          </div>
+                <Input
+                  id="quantity"
+                  name="quantity"
+                  required
+                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                  placeholder="Example: 50 bags, 100 pieces"
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="notes">Additional notes</Label>
+              {/* Timeline */}
+              <div>
+                <Label htmlFor="timeline" className="text-white">
+                  Required timeline
+                </Label>
 
-            <textarea
-              id="notes"
-              name="notes"
-              rows={4}
-              className="mt-1.5 w-full rounded-2xl border border-input bg-transparent p-3 text-sm outline-none"
-              placeholder="Preferred material brand, required delivery date, special project requirements..."
-            />
-          </div>
+                <Input
+                  id="timeline"
+                  name="timeline"
+                  required
+                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
+                  placeholder="Example: Within 2 weeks"
+                />
+              </div>
 
-          <Button type="submit">Request quotation</Button>
-        </form>
-      )}
-    </div>
+              {/* Notes */}
+              <div>
+                <Label htmlFor="notes" className="text-white">
+                  Additional notes
+                </Label>
+
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={4}
+                  className="mt-1.5 w-full rounded-2xl border border-white/10 bg-white/10 p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-blue-500"
+                  placeholder="Preferred material brand, required delivery date, special project requirements..."
+                />
+              </div>
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                className="mt-2 w-full bg-blue-500 text-white hover:bg-blue-600"
+              >
+                Request a quotation
+              </Button>
+            </form>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }

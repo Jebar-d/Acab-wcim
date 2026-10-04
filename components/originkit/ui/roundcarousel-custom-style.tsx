@@ -1,4 +1,3 @@
-// Originkit preset `custom-style` — props baked into the default export.
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -25,17 +24,33 @@ interface RoundCarouselProps {
 }
 
 const DEFAULT_IMAGES: RoundCarouselImage[] = [
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/e60dd7f7-a44f-40a7-df62-095b19cd8700/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/eec164e9-23f8-4f87-b48a-a208fa806100/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/859c75ea-953e-489e-be61-91a03a35d700/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/933a7615-f4b6-4eae-8ed1-705fa0e24400/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/7d4d2641-d6a8-4fef-e85c-b12ed100d500/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/ed7b1c40-3332-43d8-a9eb-4615ef341b00/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/31afae9c-5ba3-4ec3-2534-ed8198ed1100/w=800" },
-  { src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/bd541261-75be-469c-7dc0-dae0ce81c400/w=800" },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/e60dd7f7-a44f-40a7-df62-095b19cd8700/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/eec164e9-23f8-4f87-b48a-a208fa806100/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/859c75ea-953e-489e-be61-91a03a35d700/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/933a7615-f4b6-4eae-8ed1-705fa0e24400/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/7d4d2641-d6a8-4fef-e85c-b12ed100d500/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/ed7b1c40-3332-43d8-a9eb-4615ef341b00/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/31afae9c-5ba3-4ec3-2534-ed8198ed1100/w=800",
+  },
+  {
+    src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/bd541261-75be-469c-7dc0-dae0ce81c400/w=800",
+  },
 ];
 
-function __OriginkitBase_RoundCarousel({
+function OriginkitRoundCarousel({
   images = DEFAULT_IMAGES,
   imageWidth = 300,
   imageHeight = 300,
@@ -48,7 +63,7 @@ function __OriginkitBase_RoundCarousel({
   perspective = 3000,
   cornerRadius = 22,
   innerDim = 3.5,
-  background = "#000000",
+  background = "transparent",
   style = {},
 }: RoundCarouselProps) {
   const items = images.length > 0 ? images : DEFAULT_IMAGES;
@@ -59,58 +74,101 @@ function __OriginkitBase_RoundCarousel({
   const rotYRef = useRef(0);
   const velRef = useRef(0);
   const lastRef = useRef(0);
-  const dragRef = useRef({ active: false, x: 0 });
+
+  const dragRef = useRef({
+    active: false,
+    x: 0,
+  });
 
   const angle = 360 / count;
+
   const factor = 1 + spacing * 0.15;
+
   const radius = (imageWidth * factor) / (2 * Math.tan(Math.PI / count));
+
   const radiusPx = cornerRadius;
+
   const degPerSec = speed * 6 * (direction === "left" ? -1 : 1);
 
   useEffect(() => {
     const ring = ringRef.current;
-    if (!ring) return;
-    const apply = () =>
-      (ring.style.transform = `translateZ(${-radius}px) rotateY(${rotYRef.current}deg)`);
+
+    if (!ring) {
+      return;
+    }
+
+    const apply = () => {
+      ring.style.transform = `translateZ(${-radius}px) rotateY(${rotYRef.current}deg)`;
+    };
+
     apply();
 
     const draw = (now: number) => {
       const dt = lastRef.current ? (now - lastRef.current) / 1000 : 0;
+
       lastRef.current = now;
-      const f = Math.min(dt, 0.1);
-      const d = dragRef.current;
-      if (!d.active) {
+
+      const frameTime = Math.min(dt, 0.1);
+
+      const dragState = dragRef.current;
+
+      if (!dragState.active) {
         if (Math.abs(velRef.current) > 0.01) {
-          rotYRef.current += velRef.current * f;
+          rotYRef.current += velRef.current * frameTime;
           velRef.current *= 0.94;
         } else {
-          rotYRef.current += degPerSec * f;
+          rotYRef.current += degPerSec * frameTime;
         }
       }
+
       apply();
+
       rafRef.current = requestAnimationFrame(draw);
     };
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [radius, degPerSec, count]);
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (!drag) return;
+    rafRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [radius, degPerSec]);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag) {
+      return;
+    }
+
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    dragRef.current = { active: true, x: e.clientX };
+
+    dragRef.current = {
+      active: true,
+      x: e.clientX,
+    };
+
     velRef.current = 0;
   };
-  const onPointerMove = (e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d.active) return;
-    const dx = e.clientX - d.x;
-    d.x = e.clientX;
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const dragState = dragRef.current;
+
+    if (!dragState.active) {
+      return;
+    }
+
+    const dx = e.clientX - dragState.x;
+
+    dragState.x = e.clientX;
+
     const k = 0.3 * sensitivity;
+
     rotYRef.current += dx * k;
+
     velRef.current = dx * k * 60;
   };
-  const onPointerUp = (e: React.PointerEvent) => {
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.releasePointerCapture?.(e.pointerId);
+
     dragRef.current.active = false;
   };
 
@@ -128,12 +186,20 @@ function __OriginkitBase_RoundCarousel({
     <div
       style={{
         ...style,
+
+        /*
+         * The component itself is now the only carousel
+         * container. We intentionally allow the 3D ring
+         * to extend outside its bounds.
+         */
         width: "100%",
         height: "100%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        overflow: "hidden",
+
+        overflow: "visible",
+
         background,
         perspective: `${perspective}px`,
         cursor: drag ? "grab" : "default",
@@ -161,6 +227,7 @@ function __OriginkitBase_RoundCarousel({
         >
           {items.map((img, i) => {
             const src = img?.src;
+
             return (
               <div
                 key={i}
@@ -171,6 +238,7 @@ function __OriginkitBase_RoundCarousel({
                   transformStyle: "preserve-3d",
                 }}
               >
+                {/* Front */}
                 <div
                   style={{
                     ...faceBase,
@@ -179,6 +247,8 @@ function __OriginkitBase_RoundCarousel({
                     boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
                   }}
                 />
+
+                {/* Back */}
                 <div
                   style={{
                     ...faceBase,
@@ -197,47 +267,6 @@ function __OriginkitBase_RoundCarousel({
   );
 }
 
-const __originkitPresetProps = {
-  "images": [
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/e60dd7f7-a44f-40a7-df62-095b19cd8700/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/eec164e9-23f8-4f87-b48a-a208fa806100/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/859c75ea-953e-489e-be61-91a03a35d700/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/933a7615-f4b6-4eae-8ed1-705fa0e24400/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/7d4d2641-d6a8-4fef-e85c-b12ed100d500/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/ed7b1c40-3332-43d8-a9eb-4615ef341b00/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/31afae9c-5ba3-4ec3-2534-ed8198ed1100/w=800"
-    },
-    {
-      "src": "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/bd541261-75be-469c-7dc0-dae0ce81c400/w=800"
-    }
-  ],
-  "imageWidth": 450,
-  "imageHeight": 268,
-  "spacing": 0,
-  "speed": 5,
-  "direction": "right",
-  "tilt": -23,
-  "cornerRadius": 0,
-  "innerDim": 3.5,
-  "perspective": 3000,
-  "drag": true,
-  "sensitivity": 5,
-  "background": "#000000"
-};
-
-export default function RoundCarousel(props: Record<string, unknown>) {
-  return <__OriginkitBase_RoundCarousel {...(__originkitPresetProps as Record<string, unknown>)} {...props} />;
+export default function RoundCarousel(props: RoundCarouselProps) {
+  return <OriginkitRoundCarousel {...props} />;
 }

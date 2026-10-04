@@ -1,0 +1,21 @@
+ACAB WCIM PHP API
+=================
+
+This folder contains api.php.
+
+Recommended XAMPP placement:
+C:\xampp\htdocs\acab-wcim-api\api.php
+
+Recommended browser/API URL:
+http://localhost/acab-wcim-api/api.php
+
+Alternative valid placement:
+C:\xampp\htdocs\acab-wcim\api\api.php
+URL:
+http://localhost/acab-wcim/api/api.php
+
+If you keep the api folder from the project, copy its api.php file directly into
+C:\xampp\htdocs\acab-wcim-api\ rather than creating another nested api folder.
+
+Make sure Apache and MySQL are running in XAMPP and that the database
+acab_wcim has been imported into phpMyAdmin.

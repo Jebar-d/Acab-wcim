@@ -4,6 +4,7 @@
 import { Badge } from "@/components/ui/badge";
 import { DataTablePage } from "@/components/staff/data-table-page";
 import { addStockIn, deleteStockIn, useStockIns } from "@/lib/stock-in-store";
+import { updateRecord } from "@/lib/db-client";
 
 export default function StockInPage() {
   const entries = useStockIns();
@@ -25,6 +26,7 @@ export default function StockInPage() {
         })
       }
       onDelete={deleteStockIn}
+      onUpdate={(id, v) => void updateRecord("stock_in", id, { material: v.material, sku: v.sku, quantity: Number(v.quantity)||0, supplier: v.supplier, reference: v.reference, date: v.date })}
       fields={[
         { key: "material", label: "Material", placeholder: "Portland Cement" },
         { key: "sku", label: "SKU", placeholder: "CEM-001" },

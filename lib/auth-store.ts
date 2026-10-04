@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { apiRequest } from "@/lib/db-client";
 
 export type Role = "user" | "staff" | "admin";
-
 export type AccountStatus = "active" | "pending" | "rejected";
 
 export type Account = {
@@ -12,329 +12,138 @@ export type Account = {
   email: string;
   password: string;
   role: Role;
-  employeeId?: string;
+  employeeId?: string | null;
   status: AccountStatus;
   createdAt: string;
-  reviewedBy?: string;
-  reviewedAt?: string;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  notificationEmail?: boolean;
 };
 
-const STORAGE_KEY = "acab-accounts";
-const SESSION_KEY = "acab-session";
+const EMPTY_ACCOUNTS: Account[] = [] as Account[];
+let accountsCache: Account[] = [];
+let sessionCache: Account | null = null;
+let accountsLoaded = false;
+let sessionLoaded = false;
+const listeners = new Set<() => void>();
 
-const ACCOUNTS_EVENT = "acab-accounts-change";
+export function useSessionReady() {
+  const snapshot = React.useSyncExternalStore(
+    (callback) => { listeners.add(callback); return () => listeners.delete(callback); },
+    () => sessionLoaded,
+    () => false,
+  );
 
-const SESSION_EVENT = "acab-session-change";
+  React.useEffect(() => { void loadSession(); }, []);
+  return snapshot;
+}
 
-/*
- * No demo accounts.
- *
- * The first admin can now register normally.
- */
-const SEED_ACCOUNTS: Account[] = [];
+function notify() { listeners.forEach((listener) => listener()); }
 
-let accountsCache: Account[] | null = null;
+export type RegisterInput = { name: string; email: string; password: string; role: Role };
+export type RegisterResult = { ok: true; account: Account } | { ok: false; error: string };
+export type LoginResult = { ok: true; account: Account } | { ok: false; error: string };
 
-function loadAccountsFromStorage(): Account[] {
-  if (typeof window === "undefined") {
-    return SEED_ACCOUNTS;
-  }
-
+export async function registerAccount(input: RegisterInput): Promise<RegisterResult> {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_ACCOUNTS));
-
-      return SEED_ACCOUNTS;
-    }
-
-    const accounts = JSON.parse(raw) as Account[];
-
-    /*
-     * Remove the old demo accounts automatically.
-     */
-    const cleaned = accounts.filter(
-      (account) =>
-        account.id !== "seed-admin" &&
-        account.id !== "seed-staff-pending" &&
-        account.email !== "admin@acab.com" &&
-        account.email !== "jamie.cruz@acab.com",
-    );
-
-    if (cleaned.length !== accounts.length) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
-    }
-
-    return cleaned;
-  } catch {
-    return SEED_ACCOUNTS;
+    const account = await apiRequest<Account>("auth_register", undefined, input as Record<string, unknown>);
+    accountsCache = [account, ...accountsCache.filter((a) => a.id !== account.id)];
+    accountsLoaded = true;
+    notify();
+    return { ok: true, account };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Registration failed." };
   }
 }
 
-function getAccountsSnapshot(): Account[] {
-  if (accountsCache === null) {
-    accountsCache = loadAccountsFromStorage();
+export async function login(email: string, password: string): Promise<LoginResult> {
+  try {
+    const account = await apiRequest<Account>("auth_login", undefined, { email, password });
+    sessionCache = account;
+    sessionLoaded = true;
+    accountsCache = [account, ...accountsCache.filter((a) => a.id !== account.id)];
+    accountsLoaded = true;
+    notify();
+    return { ok: true, account };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Login failed." };
   }
+}
 
+export async function logout() {
+  try { await apiRequest("auth_logout"); } finally {
+    sessionCache = null;
+    sessionLoaded = true;
+    notify();
+  }
+}
+
+async function loadSession() {
+  if (sessionLoaded) return sessionCache;
+  try {
+    sessionCache = await apiRequest<Account | null>("auth_me");
+  } catch {
+    sessionCache = null;
+  }
+  sessionLoaded = true;
+  if (sessionCache) {
+    accountsCache = [sessionCache, ...accountsCache.filter((a) => a.id !== sessionCache?.id)];
+    accountsLoaded = true;
+  }
+  notify();
+  return sessionCache;
+}
+
+async function loadAccounts() {
+  if (accountsLoaded) return accountsCache;
+  try { accountsCache = await apiRequest<Account[]>("list", "accounts"); } catch { accountsCache = []; }
+  accountsLoaded = true;
+  notify();
   return accountsCache;
 }
 
-function writeAccounts(accounts: Account[]) {
-  accountsCache = accounts;
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
-
-  window.dispatchEvent(new Event(ACCOUNTS_EVENT));
-}
-
-function readSessionId(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return window.localStorage.getItem(SESSION_KEY);
-}
-
-function writeSessionId(id: string | null) {
-  if (id) {
-    window.localStorage.setItem(SESSION_KEY, id);
-  } else {
-    window.localStorage.removeItem(SESSION_KEY);
-  }
-
-  window.dispatchEvent(new Event(SESSION_EVENT));
-}
-
-export type RegisterInput = {
-  name: string;
-  email: string;
-  password: string;
-  role: Role;
-};
-
-export type RegisterResult =
-  | {
-      ok: true;
-      account: Account;
-    }
-  | {
-      ok: false;
-      error: string;
-    };
-
-function generateEmployeeId(role: Role, existingAccounts: Account[]): string {
-  const prefix = role === "admin" ? "ADM" : "EMP";
-
-  const existingNumbers = existingAccounts
-    .filter(
-      (account) =>
-        account.role === role && account.employeeId?.startsWith(`${prefix}-`),
-    )
-    .map((account) => Number(account.employeeId?.replace(`${prefix}-`, "")))
-    .filter((number) => !Number.isNaN(number));
-
-  const nextNumber =
-    existingNumbers.length > 0
-      ? Math.max(...existingNumbers) + 1
-      : role === "admin"
-        ? 1
-        : 1001;
-
-  return `${prefix}-${String(nextNumber).padStart(4, "0")}`;
-}
-
-export function registerAccount(input: RegisterInput): RegisterResult {
-  const accounts = loadAccountsFromStorage();
-
-  const name = input.name.trim();
-
-  const email = input.email.trim().toLowerCase();
-
-  if (!name || !email || !input.password) {
-    return {
-      ok: false,
-      error: "Please fill in all required fields.",
-    };
-  }
-
-  if (accounts.some((account) => account.email.toLowerCase() === email)) {
-    return {
-      ok: false,
-      error: "An account with this email already exists.",
-    };
-  }
-
-  const needsEmployeeId = input.role === "staff" || input.role === "admin";
-
-  /*
-   * Users can use the system immediately.
-   *
-   * Admin accounts are also active immediately so the system
-   * does not depend on a permanent demo admin account.
-   *
-   * Staff accounts remain pending for admin approval.
-   */
-  const status: AccountStatus = input.role === "staff" ? "pending" : "active";
-
-  const account: Account = {
-    id:
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `acc-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-
-    name,
-    email,
-    password: input.password,
-    role: input.role,
-
-    employeeId: needsEmployeeId
-      ? generateEmployeeId(input.role, accounts)
-      : undefined,
-
-    status,
-
-    createdAt: new Date().toISOString(),
-  };
-
-  writeAccounts([...accounts, account]);
-
-  return {
-    ok: true,
-    account,
-  };
-}
-
-export type LoginResult =
-  | {
-      ok: true;
-      account: Account;
-    }
-  | {
-      ok: false;
-      error: string;
-    };
-
-export function login(email: string, password: string): LoginResult {
-  const accounts = loadAccountsFromStorage();
-
-  const account = accounts.find(
-    (item) => item.email.toLowerCase() === email.trim().toLowerCase(),
+export function useSession(): Account | null {
+  const snapshot = React.useSyncExternalStore(
+    (callback) => { listeners.add(callback); return () => listeners.delete(callback); },
+    () => sessionCache,
+    () => null,
   );
-
-  if (!account || account.password !== password) {
-    return {
-      ok: false,
-      error: "Incorrect email or password.",
-    };
-  }
-
-  if (account.status === "pending") {
-    return {
-      ok: false,
-      error: "This staff account is waiting for admin approval.",
-    };
-  }
-
-  if (account.status === "rejected") {
-    return {
-      ok: false,
-      error: "This registration was rejected. Please contact an administrator.",
-    };
-  }
-
-  writeSessionId(account.id);
-
-  return {
-    ok: true,
-    account,
-  };
-}
-
-export function logout() {
-  writeSessionId(null);
-}
-
-export function reviewAccount(
-  id: string,
-  decision: "approve" | "reject",
-  reviewerName: string,
-) {
-  const accounts = loadAccountsFromStorage();
-
-  const next: Account[] = accounts.map((account): Account => {
-    if (account.id === id) {
-      return {
-        ...account,
-        status: decision === "approve" ? "active" : "rejected",
-        reviewedBy: reviewerName,
-        reviewedAt: new Date().toISOString(),
-      };
-    }
-
-    return account;
-  });
-
-  writeAccounts(next);
-}
-
-function subscribeAccounts(callback: () => void) {
-  const handleStorage = (event: StorageEvent) => {
-    if (event.key === STORAGE_KEY || event.key === null) {
-      accountsCache = null;
-      callback();
-    }
-  };
-
-  window.addEventListener(ACCOUNTS_EVENT, callback);
-
-  window.addEventListener("storage", handleStorage);
-
-  return () => {
-    window.removeEventListener(ACCOUNTS_EVENT, callback);
-
-    window.removeEventListener("storage", handleStorage);
-  };
-}
-
-function subscribeSession(callback: () => void) {
-  window.addEventListener(SESSION_EVENT, callback);
-
-  window.addEventListener("storage", callback);
-
-  return () => {
-    window.removeEventListener(SESSION_EVENT, callback);
-
-    window.removeEventListener("storage", callback);
-  };
+  React.useEffect(() => { void loadSession(); }, []);
+  return snapshot;
 }
 
 export function useAccounts(): Account[] {
-  return React.useSyncExternalStore(
-    subscribeAccounts,
-    getAccountsSnapshot,
-    () => SEED_ACCOUNTS,
+  const snapshot = React.useSyncExternalStore(
+    (callback) => { listeners.add(callback); return () => listeners.delete(callback); },
+    () => accountsCache,
+    () => EMPTY_ACCOUNTS,
   );
+  React.useEffect(() => { void loadAccounts(); }, []);
+  return snapshot;
 }
 
-export function useSession(): Account | null {
-  const sessionId = React.useSyncExternalStore(
-    subscribeSession,
-    readSessionId,
-    () => null,
-  );
-
-  const accounts = useAccounts();
-
-  if (!sessionId) {
-    return null;
-  }
-
-  return accounts.find((account) => account.id === sessionId) ?? null;
+export function usePendingCount() {
+  return useAccounts().filter((account) => account.status === "pending").length;
 }
 
-export function usePendingCount(): number {
-  const accounts = useAccounts();
+export async function reviewAccount(id: string, decision: "approve" | "reject", reviewerName: string) {
+  await apiRequest<Account>("auth_review", undefined, { id, decision, reviewerName });
+  await loadAccounts();
+}
 
-  return accounts.filter((account) => account.status === "pending").length;
+export async function deleteAccount(id: string) {
+  await apiRequest("delete", "accounts", { id });
+  accountsCache = accountsCache.filter((account) => account.id !== id);
+  if (sessionCache?.id === id) sessionCache = null;
+  notify();
+}
+
+export async function updateProfile(id: string, patch: { name?: string; phone?: string; avatarUrl?: string; notificationEmail?: boolean }) {
+  const account = await apiRequest<Account>("update", "accounts", { id, patch });
+  if (sessionCache?.id === id) sessionCache = account;
+  accountsCache = accountsCache.map((item) => item.id === id ? account : item);
+  notify();
+  return account;
 }

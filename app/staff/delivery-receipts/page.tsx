@@ -3,6 +3,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { DataTablePage } from "@/components/staff/data-table-page";
+import { updateRecord } from "@/lib/db-client";
 import {
   addDeliveryReceipt,
   deleteDeliveryReceipt,
@@ -38,6 +39,7 @@ export default function DeliveryReceiptsPage() {
         })
       }
       onDelete={deleteDeliveryReceipt}
+      onUpdate={(id, v) => void updateRecord("delivery_receipts", id, { drNumber: v.drNumber, orderNumber: v.orderNumber, client: v.client, items: v.items, sku: v.sku, quantity: Number(v.quantity)||0, releasedBy: v.releasedBy, date: v.date })}
       fields={[
         { key: "drNumber", label: "DR number", placeholder: "DR-1001" },
         { key: "orderNumber", label: "Order #", placeholder: "ORD-1001" },

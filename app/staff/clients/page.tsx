@@ -3,7 +3,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { DataTablePage } from "@/components/staff/data-table-page";
-import { deleteClient, upsertClient, useClients } from "@/lib/clients-store";
+import { deleteClient, updateClient, upsertClient, useClients } from "@/lib/clients-store";
 
 export default function ClientsPage() {
   const clients = useClients();
@@ -23,6 +23,7 @@ export default function ClientsPage() {
         })
       }
       onDelete={deleteClient}
+      onUpdate={(id, v) => updateClient(id, { name: v.name, company: v.company, email: v.email, phone: v.phone })}
       fields={[
         { key: "name", label: "Name", placeholder: "Maria Santos" },
         {

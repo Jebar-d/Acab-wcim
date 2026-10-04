@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { getInitials } from "@/lib/utils";
 import {
+  deleteAccount,
   reviewAccount,
   useAccounts,
   useSession,
@@ -102,8 +103,8 @@ export default function UsersPage() {
     .filter((a) => filter === "all" || a.role === filter)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  function handleReview(account: Account, decision: "approve" | "reject") {
-    reviewAccount(account.id, decision, session?.name ?? "Admin");
+  async function handleReview(account: Account, decision: "approve" | "reject") {
+    await reviewAccount(account.id, decision, session?.name ?? "Admin");
     toast(
       decision === "approve"
         ? `${account.name} approved`
@@ -111,14 +112,19 @@ export default function UsersPage() {
     );
   }
 
-  function handleRevoke(account: Account) {
-    reviewAccount(account.id, "reject", session?.name ?? "Admin");
+  async function handleRevoke(account: Account) {
+    await reviewAccount(account.id, "reject", session?.name ?? "Admin");
     toast(`${account.name}'s access revoked`);
   }
 
-  function handleReinstate(account: Account) {
-    reviewAccount(account.id, "approve", session?.name ?? "Admin");
+  async function handleReinstate(account: Account) {
+    await reviewAccount(account.id, "approve", session?.name ?? "Admin");
     toast(`${account.name} reinstated`);
+  }
+
+  async function handleDelete(account: Account) {
+    await deleteAccount(account.id);
+    toast(`${account.name} deleted`);
   }
 
   if (!isAdmin) {
@@ -316,6 +322,23 @@ export default function UsersPage() {
                         >
                           Reinstate
                         </Button>
+                      )}
+                      {account.id !== session?.id && (
+                        <AlertDialog>
+                          <AlertDialogTrigger render={<Button size="sm" variant="ghost" className="text-destructive">Delete</Button>} />
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete {account.name}&apos;s account?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This permanently removes the account and its login access. A deletion notice is recorded for staff/admin.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => void handleDelete(account)} className="bg-destructive text-white hover:bg-destructive/90">Delete account</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </TableCell>
                   </TableRow>

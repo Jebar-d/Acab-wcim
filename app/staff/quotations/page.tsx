@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { toast } from "sonner";
 
@@ -19,9 +20,11 @@ import {
 } from "@/components/ui/card";
 
 import { addNotification } from "@/lib/notifications-store";
+import { createOrderFromQuotation } from "@/lib/orders-store";
 
 import {
   confirmQuotation,
+  isOpenQuotationStatus,
   updateQuotation,
   useQuotations,
   type Quotation,
@@ -51,27 +54,39 @@ function StatusBadge({ status }: { status: Quotation["status"] }) {
 }
 
 export default function QuotationsPage() {
+  const router = useRouter();
   const quotations = useQuotations();
+  const allRequests = [...quotations].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  const activeRequests = allRequests;
 
+  async function handleConfirm(quotation: Quotation) {
+    const order = await createOrderFromQuotation({
+      id: quotation.id,
+      inquiryId: quotation.inquiryId,
+      clientId: quotation.clientId,
+      accountId: quotation.accountId,
+      projectName: quotation.projectName || "Project request",
+      customerName: quotation.customerName || "Customer",
+      materials: quotation.materials,
+      quantity: quotation.quantity,
+    });
 
-  function handleConfirm(quotation: Quotation) {
-    confirmQuotation(quotation.id, {
+    await confirmQuotation(quotation.id, {
       sendNotification: true,
+    });
+
+    await updateQuotation(quotation.id, {
+      orderId: order.id,
     });
 
     if (quotation.accountId) {
       addNotification({
         audience: "user",
-
         accountId: quotation.accountId,
-
         title: "Quotation confirmed — confirm your order",
-
         body: `Your quotation for "${quotation.projectName}" was confirmed. Click this notification to review and confirm your order.`,
-
-        /*
-         * Customer notification now opens the confirmation page.
-         */
         href: `/order-confirmation/${quotation.id}`,
       });
 
@@ -79,23 +94,21 @@ export default function QuotationsPage() {
     } else {
       toast.success("Quotation confirmed.");
     }
+
+    router.push("/staff/orders");
   }
 
   function handleReject(quotation: Quotation) {
     updateQuotation(quotation.id, {
       status: "rejected",
-
       checklistStatus: "Rejected",
     });
 
     if (quotation.accountId) {
       addNotification({
         audience: "user",
-
         accountId: quotation.accountId,
-
         title: "Your quotation was declined",
-
         body: `Your request for "${quotation.projectName}" could not be confirmed. Please contact us for details.`,
       });
     }
@@ -107,7 +120,6 @@ export default function QuotationsPage() {
     <Card>
       <CardHeader>
         <CardTitle>Quotations</CardTitle>
-
         <CardDescription>
           Requests submitted through the quotation form. Check inventory and the
           construction checklist before confirming.
@@ -115,15 +127,20 @@ export default function QuotationsPage() {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-3">
-        {quotations.length === 0 && (
+        {activeRequests.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">
             No quotation requests yet.
           </p>
         )}
 
-        {quotations.map((quotation) => {
+        {activeRequests.map((quotation) => {
           const isDecided =
             quotation.status === "confirmed" || quotation.status === "rejected";
+
+          const contactDetails = [
+            quotation.customerEmail,
+            quotation.customerPhone,
+          ].filter(Boolean).join(" • ") || "No email/phone recorded";
 
           return (
             <div
@@ -134,46 +151,53 @@ export default function QuotationsPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{quotation.projectName}</p>
-
                     <StatusBadge status={quotation.status} />
                   </div>
-
                   <p className="text-sm text-muted-foreground">
-                    {quotation.customerName ?? "Customer"} ·{" "}
-                    {quotation.projectType} · {quotation.location}
+                    {quotation.customerName ?? "Customer"} · {quotation.projectType} · {quotation.location}
                   </p>
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  Submitted {formatDate(quotation.createdAt)}
-                </p>
+                <div className="text-right text-xs text-muted-foreground">
+                  <p>Request ID: {quotation.id.slice(0, 8)}</p>
+                  <p>Submitted {formatDate(quotation.createdAt)}</p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 text-sm lg:grid-cols-2">
                 <p>
+                  <span className="text-muted-foreground">Customer name: </span>
+                  {quotation.customerName ?? "Not provided"}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Email: </span>
+                  {quotation.customerEmail ?? "Not provided"}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Contact: </span>
+                  {quotation.customerPhone ?? "Not provided"}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Status: </span>
+                  {quotation.status}
+                </p>
+                <p className="lg:col-span-2">
                   <span className="text-muted-foreground">Materials: </span>
-
                   {quotation.materials}
                 </p>
-
                 <p>
                   <span className="text-muted-foreground">Quantity: </span>
-
                   {quotation.quantity}
                 </p>
-
                 <p>
                   <span className="text-muted-foreground">Timeline: </span>
-
                   {quotation.timeline}
                 </p>
-              </div>
-
-              {quotation.notes && (
-                <p className="rounded-2xl bg-muted/40 p-3 text-sm text-muted-foreground">
-                  {quotation.notes}
+                <p className="lg:col-span-2">
+                  <span className="text-muted-foreground">Request details: </span>
+                  {quotation.notes || contactDetails}
                 </p>
-              )}
+              </div>
 
               {quotation.customerConfirmedAt && (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">

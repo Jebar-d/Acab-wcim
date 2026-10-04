@@ -74,11 +74,12 @@ export default function SuppliersPage() {
   }
 
   function handleToggle(supplier: Supplier) {
-    toggleSupplierStatus(supplier.id);
+    const nextStatus = supplier.status === "active" ? "inactive" : "active";
+    toggleSupplierStatus(supplier.id, nextStatus);
     toast(
-      supplier.status === "active"
-        ? `${supplier.name} deactivated`
-        : `${supplier.name} reactivated`,
+      nextStatus === "active"
+        ? `${supplier.name} reactivated`
+        : `${supplier.name} deactivated`,
     );
   }
 

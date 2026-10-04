@@ -6,6 +6,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTablePage } from "@/components/staff/data-table-page";
+import { updateRecord } from "@/lib/db-client";
 import {
   addStockOut,
   confirmStockOut,
@@ -16,8 +17,8 @@ import {
 export default function StockOutPage() {
   const entries = useStockOuts();
 
-  function handleConfirm(id: string) {
-    const result = confirmStockOut(id);
+  async function handleConfirm(id: string) {
+    const result = await confirmStockOut(id);
     if (!result) {
       toast.error("Couldn't confirm — check the material has enough stock.");
       return;
@@ -48,6 +49,7 @@ export default function StockOutPage() {
         })
       }
       onDelete={deleteStockOut}
+      onUpdate={(id, v) => void updateRecord("stock_out", id, { material: v.material, sku: v.sku, quantity: Number(v.quantity)||0, orderRef: v.orderRef, destination: v.destination, warehouseStaff: v.warehouseStaff, stockOutId: v.reference, date: v.date })}
       fields={[
         { key: "material", label: "Material", placeholder: "Portland Cement" },
         { key: "sku", label: "SKU", placeholder: "CEM-001" },

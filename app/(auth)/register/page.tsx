@@ -33,12 +33,12 @@ export default function RegisterPage() {
 
   const needsId = role === "staff" || role === "admin";
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
 
-    const result = registerAccount({ name, email, password, role });
+    const result = await registerAccount({ name, email, password, role });
 
     setSubmitting(false);
     if (!result.ok) {

@@ -1,9 +1,8 @@
-const staffMetrics = [
-  { label: "Assigned Orders", value: "0" },
-  { label: "Items to Pick", value: "0" },
-  { label: "Pending Deliveries", value: "0" },
-  { label: "Low Stock Items", value: "0" },
-];
+"use client";
+
+import { isOpenQuotationStatus, useQuotations } from "@/lib/quotations-store";
+import { useStockIns } from "@/lib/stock-in-store";
+import { useStockOuts } from "@/lib/stock-out-store";
 
 const staffAreas = [
   {
@@ -45,6 +44,22 @@ const staffAreas = [
 ];
 
 export default function StaffPage() {
+  const quotations = useQuotations();
+  const stockIns = useStockIns();
+  const stockOuts = useStockOuts();
+
+  const pendingQuotationCount = quotations.filter((quotation) => isOpenQuotationStatus(quotation.status)).length;
+
+  const recentRequests = quotations.filter((quotation) => isOpenQuotationStatus(quotation.status)).slice(0, 4);
+  const staffMetrics = [
+    { label: "Assigned Orders", value: "0" },
+    { label: "Items to Pick", value: "0" },
+    { label: "Pending Deliveries", value: "0" },
+    { label: "Pending Quotations", value: String(pendingQuotationCount) },
+    { label: "Stock In", value: String(stockIns.length) },
+    { label: "Stock Out", value: String(stockOuts.length) },
+  ];
+
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div>
@@ -54,7 +69,7 @@ export default function StaffPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
         {staffMetrics.map((metric) => (
           <div
             key={metric.label}
@@ -67,10 +82,40 @@ export default function StaffPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-card p-5">
-        <h2 className="font-semibold">Today&apos;s work</h2>
+        <h2 className="font-semibold">Customer requests waiting for review</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Assigned orders, stock movements, and delivery tasks will appear here.
+          Staff can review customer quotation requests and approve them here.
         </p>
+
+        <div className="mt-4 space-y-3">
+          {recentRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No quotation requests yet.
+            </p>
+          ) : (
+            recentRequests.map((quotation) => (
+              <div
+                key={quotation.id}
+                className="rounded-xl border border-border bg-muted/30 p-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{quotation.projectName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {quotation.customerName ?? "Customer"} · {quotation.location}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-border px-2 py-1 text-xs capitalize">
+                    {quotation.status}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {quotation.materials} · Qty: {quotation.quantity}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

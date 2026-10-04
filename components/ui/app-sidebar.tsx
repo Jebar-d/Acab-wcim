@@ -20,6 +20,7 @@ import {
   Package,
   ShoppingCart,
   Truck,
+  type LucideIcon,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { BreadcrumbEntry } from "@/lib/nav";
@@ -54,10 +55,10 @@ import { NotificationsMenu } from "@/components/ui/notifications-menu";
 // (Sales, Inventory, Warehouse, Procurement) live in the Staff portal at
 // /staff/*. This sidebar only covers what's actually an admin's job —
 // managing the supplier registry and managing user accounts/approvals.
-type NavItem = { title: string; url: string; icon: React.ElementType };
+type NavItem = { title: string; url: string; icon: LucideIcon };
 type GroupedNavItem = {
   title: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   items: { title: string; url: string }[];
 };
 
@@ -180,27 +181,30 @@ export function AppSidebar() {
           <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {platformNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={pathname === item.url}
-                    render={
-                      <a href={item.url}>
-                        <item.icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
-                        <span>{item.title}</span>
-                        {item.title === "Users" && pendingCount > 0 && (
-                          <Badge
-                            variant="destructive"
-                            className="ml-auto h-4.5 px-1.5 text-[10px]"
-                          >
-                            {pendingCount}
-                          </Badge>
-                        )}
-                      </a>
-                    }
-                  />
-                </SidebarMenuItem>
-              ))}
+              {platformNav.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={pathname === item.url}
+                      render={
+                        <Link href={item.url}>
+                          <Icon className="size-4 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-active/menu-button:scale-95" />
+                          <span>{item.title}</span>
+                          {item.title === "Users" && pendingCount > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="ml-auto h-4.5 px-1.5 text-[10px]"
+                            >
+                              {pendingCount}
+                            </Badge>
+                          )}
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -210,6 +214,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {operationsNav.map((item) => {
+                const Icon = item.icon;
                 const isOpen = openGroups[item.title] ?? false;
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -221,7 +226,7 @@ export function AppSidebar() {
                         }))
                       }
                     >
-                      <item.icon className="size-4" />
+                      <Icon className="size-4" />
                       <span>{item.title}</span>
                       <ChevronRight
                         className={`ml-auto size-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}

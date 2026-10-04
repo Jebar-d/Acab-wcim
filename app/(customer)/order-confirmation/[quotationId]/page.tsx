@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { CheckCircle2, ClipboardList, Package } from "lucide-react";
+import { CheckCircle2, ClipboardList, MapPin, Package } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,9 @@ import {
 } from "@/lib/quotations-store";
 import { createOrderFromQuotation } from "@/lib/orders-store";
 import { addNotification } from "@/lib/notifications-store";
+import { useAddresses } from "@/lib/addresses-store";
+import { updateOrder } from "@/lib/orders-store";
+import { addTransaction } from "@/lib/transactions-store";
 
 export default function OrderConfirmationPage() {
   const params = useParams<{ quotationId: string }>();
@@ -38,6 +41,11 @@ export default function OrderConfirmationPage() {
 
   const quotation = getQuotationById(quotationId);
 
+  const addresses = useAddresses();
+  const userAddresses = addresses.filter((address) => address.userId === session?.id);
+  const [selectedAddress, setSelectedAddress] = React.useState("");
+  const [deliveryMethod, setDeliveryMethod] = React.useState("Delivery");
+  const [paymentMethod, setPaymentMethod] = React.useState("Cash on delivery");
   const [completed, setCompleted] = React.useState(false);
 
   // --------------------------------------------------
@@ -117,13 +125,16 @@ export default function OrderConfirmationPage() {
   // --------------------------------------------------
   // CUSTOMER CONFIRMS THE ORDER
   // --------------------------------------------------
-  function handleConfirmOrder() {
+  async function handleConfirmOrder() {
     /*
      * Create the order from the confirmed quotation.
      *
      * currentQuotation is guaranteed not to be null.
      */
-    const order = createOrderFromQuotation(currentQuotation);
+    const order = await createOrderFromQuotation(currentQuotation);
+
+    updateOrder(order.id, { deliveryMethod, deliveryAddressId: selectedAddress || undefined, paymentMethod });
+    void addTransaction({ orderId: order.id, accountId: currentSession.id, type: "ORDER_CONFIRMED", status: "Confirmed", title: "Customer confirmed order", message: `${currentSession.name} confirmed the order for ${currentQuotation.projectName}.`, metadata: { deliveryMethod, paymentMethod, deliveryAddressId: selectedAddress || null } });
 
     /*
      * Save the customer's confirmation and connect
@@ -249,8 +260,41 @@ export default function OrderConfirmationPage() {
             </div>
           )}
 
+          {/* DELIVERY + PAYMENT */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex items-center gap-2 font-medium"><MapPin className="size-4 text-primary" /> Delivery method</div>
+              <select className="mt-3 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm" value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)}>
+                <option>Delivery</option>
+                <option>Customer pickup</option>
+              </select>
+            </div>
+            <div className="rounded-xl border border-border p-4">
+              <p className="font-medium">Payment method</p>
+              <select className="mt-3 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <option>Cash on delivery</option>
+                <option>Bank transfer</option>
+                <option>Pay on pickup</option>
+              </select>
+            </div>
+          </div>
+
+          {deliveryMethod === "Delivery" && (
+            <div className="rounded-xl border border-border p-4">
+              <p className="font-medium">Delivery address</p>
+              {userAddresses.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">No saved address yet. Add one from your Profile & activity page before confirming a delivery order.</p>
+              ) : (
+                <select className="mt-3 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm" required value={selectedAddress} onChange={(e) => setSelectedAddress(e.target.value)}>
+                  <option value="">Select an address</option>
+                  {userAddresses.map((address) => <option key={address.id} value={address.id}>{address.label} — {address.line1}, {address.city ?? ""}</option>)}
+                </select>
+              )}
+            </div>
+          )}
+
           {/* CONFIRM BUTTON */}
-          <Button size="lg" onClick={handleConfirmOrder}>
+          <Button size="lg" onClick={handleConfirmOrder} disabled={deliveryMethod === "Delivery" && (!userAddresses.length || !selectedAddress)}>
             <CheckCircle2 className="size-4" />
             Confirm order
           </Button>

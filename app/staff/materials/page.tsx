@@ -6,6 +6,7 @@ import { DataTablePage } from "@/components/staff/data-table-page";
 import {
   addMaterial,
   deleteMaterial,
+  updateMaterial,
   useMaterials,
 } from "@/lib/materials-store";
 
@@ -36,6 +37,7 @@ export default function MaterialsPage() {
         })
       }
       onDelete={deleteMaterial}
+      onUpdate={(id, v) => updateMaterial(id, { sku: v.sku, name: v.name, category: v.category, unit: v.unit, quantity: Number(v.quantity)||0, minimumStock: Number(v.minimumStock)||0 })}
       fields={[
         { key: "sku", label: "SKU", placeholder: "CEM-002" },
         { key: "name", label: "Name", placeholder: "White Cement" },

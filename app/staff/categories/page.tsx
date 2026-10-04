@@ -6,6 +6,7 @@ import { DataTablePage } from "@/components/staff/data-table-page";
 import {
   addCategory,
   deleteCategory,
+  updateCategory,
   useCategories,
 } from "@/lib/categories-store";
 
@@ -20,6 +21,7 @@ export default function CategoriesPage() {
       data={categories}
       onAdd={(v) => addCategory({ name: v.name, description: v.description })}
       onDelete={deleteCategory}
+      onUpdate={(id, v) => updateCategory(id, { name: v.name, description: v.description })}
       fields={[
         { key: "name", label: "Name", placeholder: "Plumbing" },
         {

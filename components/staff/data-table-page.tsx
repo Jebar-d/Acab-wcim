@@ -2,9 +2,20 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Edit3, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -62,6 +73,7 @@ export function DataTablePage<T extends { id: string }>({
   fields,
   onAdd,
   onDelete,
+  onUpdate,
   emptyLabel = "No records yet.",
   addLabel = "Add",
   extra,
@@ -73,6 +85,7 @@ export function DataTablePage<T extends { id: string }>({
   fields: FieldConfig[];
   onAdd: (values: Record<string, string>) => void;
   onDelete?: (id: string) => void;
+  onUpdate?: (id: string, values: Record<string, string>) => void;
   emptyLabel?: string;
   addLabel?: string;
   extra?: (row: T) => React.ReactNode;
@@ -83,12 +96,29 @@ export function DataTablePage<T extends { id: string }>({
     [fields],
   );
   const [form, setForm] = React.useState<Record<string, string>>(emptyForm);
+  const [editing, setEditing] = React.useState<T | null>(null);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     onAdd(form);
     setForm(emptyForm);
     setOpen(false);
+  }
+
+  function openEdit(row: T) {
+    const values = Object.fromEntries(
+      fields.map((field) => [field.key, String((row as Record<string, unknown>)[field.key] ?? "")]),
+    );
+    setForm(values);
+    setEditing(row);
+  }
+
+  function handleEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (editing && onUpdate) onUpdate(editing.id, form);
+    setEditing(null);
+    setForm(emptyForm);
   }
 
   return (
@@ -163,7 +193,7 @@ export function DataTablePage<T extends { id: string }>({
                     {col.label}
                   </TableHead>
                 ))}
-                {(onDelete || extra) && (
+                {(onDelete || onUpdate || extra) && (
                   <TableHead className="text-right">Actions</TableHead>
                 )}
               </TableRow>
@@ -182,19 +212,36 @@ export function DataTablePage<T extends { id: string }>({
                           )}
                     </TableCell>
                   ))}
-                  {(onDelete || extra) && (
+                  {(onDelete || onUpdate || extra) && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {extra?.(row)}
-                        {onDelete && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => onDelete(row.id)}
-                          >
-                            <Trash2 className="size-4" />
+                        {onUpdate && (
+                          <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                            <Edit3 className="size-4" />
+                            Edit
                           </Button>
+                        )}
+                        {onDelete && (
+                          <AlertDialog open={deleteId === row.id} onOpenChange={(open) => setDeleteId(open ? row.id : null)}>
+                            <AlertDialogTrigger render={
+                              <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                                <Trash2 className="size-4" />
+                              </Button>
+                            } />
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this record?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action permanently removes the record. Admin and staff notification records will also be created.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => { onDelete(row.id); setDeleteId(null); }}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     </TableCell>
@@ -205,6 +252,27 @@ export function DataTablePage<T extends { id: string }>({
           </Table>
         )}
       </CardContent>
+      <Sheet open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Edit record</SheetTitle>
+            <SheetDescription>Update the selected record and save the changes to the database.</SheetDescription>
+          </SheetHeader>
+          <form id="data-table-edit-form" onSubmit={handleEdit} className="flex flex-1 flex-col gap-4 overflow-y-auto px-6">
+            {fields.map((field) => (
+              <div key={field.key} className="flex flex-col gap-1.5">
+                <Label htmlFor={`edit-${field.key}`}>{field.label}</Label>
+                <Input id={`edit-${field.key}`} type={field.type ?? "text"} value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />
+              </div>
+            ))}
+          </form>
+          <SheetFooter className="flex-row justify-end gap-2">
+            <SheetClose render={<Button variant="outline">Cancel</Button>} />
+            <Button type="submit" form="data-table-edit-form">Save changes</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
     </Card>
   );
 }
