@@ -22,3 +22,7 @@ acab_wcim has been imported into phpMyAdmin.
 
 For an existing database, apply database/migrations/20261004_quote_customer_confirmation.sql
 before deploying the quotation customer-confirmation workflow. It is safe to reapply.
+
+For purchasing, apply database/migrations/20261005_purchase_orders.sql before
+deploying the supplier and purchase-order workflow. Receiving an ordered PO adds
+one stock-in record and updates material inventory in a single database transaction.

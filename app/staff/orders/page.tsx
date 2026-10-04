@@ -23,8 +23,10 @@ export default function OrdersPage() {
   const materials = useMaterials();
   const session = useSession();
   const [editRequests,setEditRequests]=useState<EditRequest[]>([]);
+  const [orderFilter,setOrderFilter]=useState("All");
   async function loadEditRequests(){try{setEditRequests(await apiRequest<EditRequest[]>("order_edit_list"));}catch{/* API may be unavailable during setup. */}}
-  useEffect(()=>{const timer=window.setInterval(()=>void loadEditRequests(),10000);void apiRequest<EditRequest[]>("order_edit_list").then(setEditRequests).catch(()=>{});return()=>window.clearInterval(timer);},[]);
+  useEffect(()=>{const status=new URLSearchParams(window.location.search).get("status");if(status&&STATUS_OPTIONS.includes(status as OrderStatus))setOrderFilter(status);const timer=window.setInterval(()=>void loadEditRequests(),10000);void apiRequest<EditRequest[]>("order_edit_list").then(setEditRequests).catch(()=>{});return()=>window.clearInterval(timer);},[]);
+  const visibleOrders=orders.filter((order)=>orderFilter==="All"||order.status===orderFilter);
 
   async function reviewEdit(requestId:string,decision:"approve"|"reject"){
     const reason=decision==="reject"?window.prompt("Reason for rejecting this requested change?")?.trim()??"":"";
@@ -53,12 +55,13 @@ export default function OrdersPage() {
         return <div key={request.id} className="rounded-2xl border p-4"><div className="flex flex-wrap justify-between gap-3"><div><p className="font-medium">Quotation #{(request.quotation_id||request.order_id).slice(0,8)} · {request.project_name}</p><p className="text-sm text-muted-foreground">{request.customer_name} · {new Date(request.requested_at).toLocaleString()}</p></div><Badge variant={request.status==="PENDING"?"outline":request.status==="APPROVED"?"secondary":"destructive"}>{request.status.replaceAll("_"," ")}</Badge></div><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><p className="text-xs font-semibold uppercase text-muted-foreground">Original order</p>{renderItems(request.previousItems)}</div><div><p className="text-xs font-semibold uppercase text-muted-foreground">Edited order</p>{renderItems(request.requestedItems)}</div></div><div className="mt-3 rounded-xl bg-muted/30 p-3"><p className="text-xs font-semibold uppercase text-muted-foreground">Changes</p>{changes.length?changes.map((change,index)=><p key={`${change.label}-${change.item.materialId}-${index}`} className="mt-1 text-sm"><span className="font-semibold">{change.label}:</span> {change.item.materialName} · {change.detail}</p>):<p className="mt-1 text-sm text-muted-foreground">No item differences recorded.</p>}</div>{request.reviewed_at&&<p className="mt-2 text-xs text-muted-foreground">Reviewed {new Date(request.reviewed_at).toLocaleString()}{request.reviewer_name?` by ${request.reviewer_name}`:""}{request.rejection_reason?` · ${request.rejection_reason}`:""}</p>}{request.status==="PENDING"&&<div className="mt-3 flex gap-2"><Button size="sm" onClick={()=>void reviewEdit(request.id,"approve")}>Approve changes</Button><Button size="sm" variant="outline" onClick={()=>void reviewEdit(request.id,"reject")}>Reject changes</Button></div>}</div>;
       })}</CardContent>
     </Card>
+    <div className="mb-4 flex flex-wrap gap-2">{["All",...STATUS_OPTIONS.filter((status)=>status!=="EDIT_REQUESTED")].map((status)=><Button key={status} size="sm" variant={orderFilter===status?"default":"outline"} onClick={()=>setOrderFilter(status)}>{status}</Button>)}</div>
     <DataTablePage
-      title="Orders"
+      title={orderFilter==="Pending"?"Pending Orders":orderFilter==="All"?"Orders":`${orderFilter} Orders`}
       description="Monitor customer orders from confirmation through warehouse release and delivery."
       addLabel="Add order"
       emptyLabel="No orders yet."
-      data={orders}
+      data={visibleOrders}
       onAdd={(v) => addOrder({ projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity })}
       onDelete={deleteOrder}
       onUpdate={(id, v) => updateOrder(id, { projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity })}
