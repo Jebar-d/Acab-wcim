@@ -53,12 +53,16 @@ export default function InquirePage() {
       const materials = String(data.get("materials") ?? "").trim();
       const quantity = String(data.get("quantity") ?? "").trim();
       const timeline = String(data.get("timeline") ?? "").trim();
-      const email = String(data.get("customerEmail") ?? session.email ?? "").trim();
+      const email = String(
+        data.get("customerEmail") ?? session.email ?? "",
+      ).trim();
       const phone = String(data.get("customerPhone") ?? "").trim();
       const notes = String(data.get("notes") ?? "").trim();
 
       if (!project || !location || !materials || !quantity || !timeline) {
-        toast.error("Please fill in all required quotation details before submitting.");
+        toast.error(
+          "Please fill in all required quotation details before submitting.",
+        );
         return;
       }
 
@@ -115,7 +119,11 @@ export default function InquirePage() {
       toast.success("Quotation request received.");
       router.push("/");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not submit quotation request.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not submit quotation request.",
+      );
     } finally {
       setSaving(false);
     }
@@ -217,6 +225,7 @@ export default function InquirePage() {
                     id="customerEmail"
                     name="customerEmail"
                     type="email"
+                    key={session?.email ?? "no-session"}
                     defaultValue={session?.email ?? ""}
                     className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
                     placeholder="you@example.com"
