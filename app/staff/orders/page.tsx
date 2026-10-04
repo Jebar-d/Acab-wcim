@@ -6,7 +6,7 @@ import { DataTablePage } from "@/components/staff/data-table-page";
 import { addOrder, deleteOrder, updateOrder, updateOrderStatus, useOrders, type OrderStatus } from "@/lib/orders-store";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-store";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { apiRequest, resolveApiAssetUrl } from "@/lib/db-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,10 @@ type EditRequest={id:string;order_id:string;quotation_id?:string;customer_name:s
 const STATUS_OPTIONS: OrderStatus[] = ["Pending", "Confirmed", "APPROVED", "EDIT_REQUESTED", "Preparing", "Ready for Release", "Released", "Delivered", "Cancelled"];
 
 export default function OrdersPage() {
+  return <Suspense fallback={null}><OrdersContent /></Suspense>;
+}
+
+function OrdersContent() {
   const orders = useOrders();
   const materials = useMaterials();
   const session = useSession();
