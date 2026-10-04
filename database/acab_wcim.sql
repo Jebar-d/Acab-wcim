@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS inquiries (
   quantity VARCHAR(255) NOT NULL,
   timeline VARCHAR(255) NOT NULL,
   notes TEXT NULL,
+  customer_change_request TEXT NULL,
   status VARCHAR(80) NOT NULL DEFAULT 'pending',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,

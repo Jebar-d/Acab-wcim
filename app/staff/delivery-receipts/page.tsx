@@ -3,6 +3,10 @@
 
 import { Badge } from "@/components/ui/badge";
 import { DataTablePage } from "@/components/staff/data-table-page";
+import {
+  DeliveryReceiptDialog,
+  shortAddress,
+} from "@/components/delivery-receipt-view";
 import { updateRecord } from "@/lib/db-client";
 import {
   addDeliveryReceipt,
@@ -38,8 +42,20 @@ export default function DeliveryReceiptsPage() {
           status: "Draft",
         })
       }
+      extra={(r) => <DeliveryReceiptDialog receipt={r} />}
       onDelete={deleteDeliveryReceipt}
-      onUpdate={(id, v) => void updateRecord("delivery_receipts", id, { drNumber: v.drNumber, orderNumber: v.orderNumber, client: v.client, items: v.items, sku: v.sku, quantity: Number(v.quantity)||0, releasedBy: v.releasedBy, date: v.date })}
+      onUpdate={(id, v) =>
+        void updateRecord("delivery_receipts", id, {
+          drNumber: v.drNumber,
+          orderNumber: v.orderNumber,
+          client: v.client,
+          items: v.items,
+          sku: v.sku,
+          quantity: Number(v.quantity) || 0,
+          releasedBy: v.releasedBy,
+          date: v.date,
+        })
+      }
       fields={[
         { key: "drNumber", label: "DR number", placeholder: "DR-1001" },
         { key: "orderNumber", label: "Order #", placeholder: "ORD-1001" },
@@ -61,9 +77,24 @@ export default function DeliveryReceiptsPage() {
       ]}
       columns={[
         { key: "drNumber", label: "Receipt" },
+        { key: "orderNumber", label: "Order #" },
         { key: "client", label: "Client" },
         { key: "items", label: "Items" },
         { key: "quantity", label: "Qty" },
+        {
+          key: "deliveryAddress",
+          label: "Deliver to",
+          render: (r) => (
+            <span
+              title={r.deliveryAddress ?? undefined}
+              className="block max-w-[220px] truncate text-sm text-muted-foreground"
+            >
+              {[r.deliveryMethod, shortAddress(r.deliveryAddress)]
+                .filter(Boolean)
+                .join(" · ") || "—"}
+            </span>
+          ),
+        },
         {
           key: "status",
           label: "Status",
