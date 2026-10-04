@@ -26,3 +26,7 @@ before deploying the quotation customer-confirmation workflow. It is safe to rea
 For the customer "Submit changes for review" workflow, apply
 database/migrations/20261005_order_edit_approval.sql to acab_wcim using phpMyAdmin's
 Import or SQL tab. It creates the order_edit_requests table and is safe to reapply.
+
+For purchasing, apply database/migrations/20261005_purchase_orders.sql before
+deploying the supplier and purchase-order workflow. Receiving an ordered PO adds
+one stock-in record and updates material inventory in a single database transaction.

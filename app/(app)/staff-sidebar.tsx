@@ -99,7 +99,7 @@ const quickLinks = [
   { title: "Low Stock Alerts", url: "/staff/alerts", icon: AlertTriangle },
   {
     title: "Pending Orders",
-    url: "/staff/purchase-orders?status=pending",
+    url: "/staff/orders?status=Pending",
     icon: Clock,
   },
   { title: "Recent Deliveries", url: "/staff/delivery-receipts", icon: Truck },

@@ -49,10 +49,11 @@ import { toast } from "sonner";
 export type FieldConfig = {
   key: string;
   label: string;
-  type?: "text" | "number" | "date" | "image";
+  type?: "text" | "number" | "date" | "image" | "select";
   defaultValue?: string;
   placeholder?: string;
   previewKey?: string;
+  options?: Array<{ value: string; label: string }>;
 };
 
 function ImagePreview({ src }: { src: string }) {
@@ -140,12 +141,15 @@ export function DataTablePage<T extends { id: string }>({
   const [editing, setEditing] = React.useState<T | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const [readingImage, setReadingImage] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (readingImage) { toast.error("Wait for the image preview to finish before saving."); return; }
+    setSaving(true);
     try { await onAdd(form); setForm(emptyForm); setOpen(false); }
     catch (error) { toast.error(error instanceof Error ? error.message : "Could not save this record."); }
+    finally { setSaving(false); }
   }
 
   function openEdit(row: T) {
@@ -160,8 +164,10 @@ export function DataTablePage<T extends { id: string }>({
   async function handleEdit(event: React.FormEvent) {
     event.preventDefault();
     if (readingImage) { toast.error("Wait for the image preview to finish before saving."); return; }
+    setSaving(true);
     try { if (editing && onUpdate) await onUpdate(editing.id, form); setEditing(null); setForm(emptyForm); }
     catch (error) { toast.error(error instanceof Error ? error.message : "Could not update this record."); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -172,7 +178,7 @@ export function DataTablePage<T extends { id: string }>({
           <CardDescription>{description}</CardDescription>
         </div>
 
-        <Sheet open={open} onOpenChange={setOpen}>
+        <Sheet open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (nextOpen) setForm(emptyForm); }}>
           <SheetTrigger
             render={
               <Button size="sm">
@@ -195,15 +201,15 @@ export function DataTablePage<T extends { id: string }>({
               {fields.map((field) => (
                 <div key={field.key} className="flex flex-col gap-1.5">
                   <Label htmlFor={field.key}>{field.label}</Label>
-                  {field.type === "image" ? <ImageField value={form[field.key] ?? ""} currentImageUrl={field.previewKey && editing ? String((editing as Record<string, unknown>)[field.previewKey] ?? "") : undefined} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onReadingChange={setReadingImage} /> : <Input id={field.key} type={field.type ?? "text"} required value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />}
+                  {field.type === "image" ? <ImageField value={form[field.key] ?? ""} currentImageUrl={field.previewKey && editing ? String((editing as Record<string, unknown>)[field.previewKey] ?? "") : undefined} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onReadingChange={setReadingImage} /> : field.type === "select" ? <select id={field.key} required value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} className="h-10 rounded-xl border border-border bg-background px-3 text-sm">{field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <Input id={field.key} type={field.type ?? "text"} required value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />}
                 </div>
               ))}
             </form>
 
             <SheetFooter className="flex-row justify-end gap-2">
               <SheetClose render={<Button variant="outline">Cancel</Button>} />
-              <Button type="submit" form="data-table-add-form" disabled={readingImage}>
-                {readingImage ? "Preparing image…" : addLabel}
+              <Button type="submit" form="data-table-add-form" disabled={readingImage || saving}>
+                {readingImage ? "Preparing image…" : saving ? "Saving…" : addLabel}
               </Button>
             </SheetFooter>
           </SheetContent>
@@ -293,13 +299,13 @@ export function DataTablePage<T extends { id: string }>({
             {fields.map((field) => (
               <div key={field.key} className="flex flex-col gap-1.5">
                 <Label htmlFor={`edit-${field.key}`}>{field.label}</Label>
-                {field.type === "image" ? <ImageField value={form[field.key] ?? ""} currentImageUrl={field.previewKey ? String((editing as unknown as Record<string, unknown> | null)?.[field.previewKey] ?? "") : undefined} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onReadingChange={setReadingImage} /> : <Input id={`edit-${field.key}`} type={field.type ?? "text"} value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />}
+              {field.type === "image" ? <ImageField value={form[field.key] ?? ""} currentImageUrl={field.previewKey ? String((editing as unknown as Record<string, unknown> | null)?.[field.previewKey] ?? "") : undefined} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onReadingChange={setReadingImage} /> : field.type === "select" ? <select id={`edit-${field.key}`} value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} className="h-10 rounded-xl border border-border bg-background px-3 text-sm">{field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <Input id={`edit-${field.key}`} type={field.type ?? "text"} value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />}
               </div>
             ))}
           </form>
           <SheetFooter className="flex-row justify-end gap-2">
             <SheetClose render={<Button variant="outline">Cancel</Button>} />
-            <Button type="submit" form="data-table-edit-form" disabled={readingImage}>{readingImage ? "Preparing image…" : "Save changes"}</Button>
+            <Button type="submit" form="data-table-edit-form" disabled={readingImage || saving}>{readingImage ? "Preparing image…" : saving ? "Saving…" : "Save changes"}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

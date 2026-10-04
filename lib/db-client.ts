@@ -11,6 +11,7 @@ export type DbEntity =
   | "inquiries"
   | "quotations"
   | "orders"
+  | "purchase_orders"
   | "delivery_receipts"
   | "stock_in"
   | "stock_out"

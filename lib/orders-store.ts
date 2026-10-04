@@ -69,7 +69,7 @@ export function updateOrder(id: string, patch: Partial<Order>) {
   return updateRecord<Order>("orders", id, patch);
 }
 
-export function addOrder(
+export async function addOrder(
   input: Omit<Order, "id" | "createdAt" | "status"> & {
     status?: OrderStatus;
   },
@@ -80,8 +80,7 @@ export function addOrder(
     createdAt: new Date().toISOString(),
     status: input.status ?? "Pending",
   };
-  void createRecord("orders", row);
-  return row;
+  return createRecord("orders", row);
 }
 
 export function deleteOrder(id: string) {

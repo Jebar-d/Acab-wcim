@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMaterials } from "@/lib/materials-store";
 import { ImageOff } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 type EditItem={materialId:string;sku?:string;materialName:string;imageUrl?:string|null;quantity:number;unit:string};
 type EditRequest={id:string;order_id:string;quotation_id?:string;customer_name:string;project_name:string;status:string;requested_at:string;reviewed_at?:string|null;reviewer_name?:string|null;rejection_reason?:string|null;requestedItems:EditItem[];previousItems:EditItem[]};
@@ -22,10 +24,14 @@ export default function OrdersPage() {
   const orders = useOrders();
   const materials = useMaterials();
   const session = useSession();
+  const searchParams = useSearchParams();
   const [editRequests,setEditRequests]=useState<EditRequest[]>([]);
   const [reviewingId,setReviewingId]=useState<string|null>(null);
+  const requestedStatus = searchParams.get("status");
+  const orderFilter = requestedStatus && STATUS_OPTIONS.includes(requestedStatus as OrderStatus) ? requestedStatus : "All";
   async function loadEditRequests(){try{setEditRequests(await apiRequest<EditRequest[]>("order_edit_list"));}catch{/* API may be unavailable during setup. */}}
   useEffect(()=>{const timer=window.setInterval(()=>void loadEditRequests(),10000);void apiRequest<EditRequest[]>("order_edit_list").then(setEditRequests).catch(()=>{});return()=>window.clearInterval(timer);},[]);
+  const visibleOrders=orders.filter((order)=>orderFilter==="All"||order.status===orderFilter);
 
   async function reviewEdit(requestId:string,decision:"approve"|"reject"){
     const reason=decision==="reject"?window.prompt("Reason for rejecting this requested change?")?.trim()??"":"";
@@ -81,12 +87,13 @@ export default function OrdersPage() {
         })}
       </CardContent>
     </Card>
+    <div className="mb-4 flex flex-wrap gap-2">{["All",...STATUS_OPTIONS.filter((status)=>status!=="EDIT_REQUESTED")].map((status)=><Button key={status} size="sm" variant={orderFilter===status?"default":"outline"} render={<Link href={status === "All" ? "/staff/orders" : `/staff/orders?status=${encodeURIComponent(status)}`} />}>{status}</Button>)}</div>
     <DataTablePage
-      title="Orders"
+      title={orderFilter==="Pending"?"Pending Orders":orderFilter==="All"?"Orders":`${orderFilter} Orders`}
       description="Monitor customer orders from confirmation through warehouse release and delivery."
       addLabel="Add order"
       emptyLabel="No orders yet."
-      data={orders}
+      data={visibleOrders}
       onAdd={(v) => addOrder({ projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity })}
       onDelete={deleteOrder}
       onUpdate={(id, v) => updateOrder(id, { projectName: v.projectName, clientName: v.clientName, materials: v.materials, quantity: v.quantity })}
