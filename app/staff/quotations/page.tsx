@@ -20,15 +20,18 @@ import {
 } from "@/components/ui/card";
 
 import { addNotification } from "@/lib/notifications-store";
-import { createOrderFromQuotation } from "@/lib/orders-store";
 
 import {
   confirmQuotation,
-  isOpenQuotationStatus,
   updateQuotation,
   useQuotations,
   type Quotation,
 } from "@/lib/quotations-store";
+import { parseQuotationItems } from "@/lib/quotations-store";
+import { resolveApiAssetUrl } from "@/lib/db-client";
+import { ImageOff } from "lucide-react";
+import { useMaterials } from "@/lib/materials-store";
+import { useSession } from "@/lib/auth-store";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -56,29 +59,16 @@ function StatusBadge({ status }: { status: Quotation["status"] }) {
 export default function QuotationsPage() {
   const router = useRouter();
   const quotations = useQuotations();
+  const materials = useMaterials();
+  const session = useSession();
   const allRequests = [...quotations].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   const activeRequests = allRequests;
 
   async function handleConfirm(quotation: Quotation) {
-    const order = await createOrderFromQuotation({
-      id: quotation.id,
-      inquiryId: quotation.inquiryId,
-      clientId: quotation.clientId,
-      accountId: quotation.accountId,
-      projectName: quotation.projectName || "Project request",
-      customerName: quotation.customerName || "Customer",
-      materials: quotation.materials,
-      quantity: quotation.quantity,
-    });
-
     await confirmQuotation(quotation.id, {
       sendNotification: true,
-    });
-
-    await updateQuotation(quotation.id, {
-      orderId: order.id,
     });
 
     if (quotation.accountId) {
@@ -116,6 +106,17 @@ export default function QuotationsPage() {
     toast("Quotation rejected.");
   }
 
+  async function handleCancel(quotation: Quotation) {
+    if (!window.confirm(`Cancel quotation for ${quotation.projectName}?`)) return;
+    try {
+      await updateQuotation(quotation.id, { status: "cancelled", cancelledAt: new Date().toISOString(), cancelledBy: session?.id });
+      if (quotation.accountId) addNotification({ audience: "user", accountId: quotation.accountId, title: "Quotation cancelled", body: `Staff cancelled quotation #${quotation.id.slice(0, 8)} for ${quotation.projectName}.`, href: "/profile" });
+      toast.success("Quotation cancelled.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not cancel this quotation.");
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -134,8 +135,7 @@ export default function QuotationsPage() {
         )}
 
         {activeRequests.map((quotation) => {
-          const isDecided =
-            quotation.status === "confirmed" || quotation.status === "rejected";
+          const isDecided = ["confirmed", "rejected", "cancelled", "expired"].includes(quotation.status);
 
           const contactDetails = [
             quotation.customerEmail,
@@ -181,10 +181,10 @@ export default function QuotationsPage() {
                   <span className="text-muted-foreground">Status: </span>
                   {quotation.status}
                 </p>
-                <p className="lg:col-span-2">
+                <div className="lg:col-span-2">
                   <span className="text-muted-foreground">Materials: </span>
-                  {quotation.materials}
-                </p>
+                  {parseQuotationItems(quotation.materials).length ? <ul className="mt-2 space-y-2">{parseQuotationItems(quotation.materials).map((item)=>{const imageUrl=item.imageUrl ?? materials.find((material)=>material.id===item.materialId)?.imageUrl;return <li key={item.materialId} className="flex items-center gap-3"><span className="relative flex size-10 shrink-0 items-center justify-center rounded-md border text-muted-foreground">{imageUrl ? <img src={resolveApiAssetUrl(imageUrl)} alt={item.materialName} className="absolute inset-0 size-full rounded-md object-contain" onError={(event)=>{event.currentTarget.style.display="none";}} /> : <ImageOff className="size-4" aria-label="No image" />}</span><span>{item.materialName} · {item.quantity} {item.unit}{item.size?` · ${item.size}`:""}{item.brand?` · ${item.brand}`:""}</span></li>;})}</ul> : quotation.materials}
+                </div>
                 <p>
                   <span className="text-muted-foreground">Quantity: </span>
                   {quotation.quantity}
@@ -193,6 +193,7 @@ export default function QuotationsPage() {
                   <span className="text-muted-foreground">Timeline: </span>
                   {quotation.timeline}
                 </p>
+                {quotation.expiresAt && <p><span className="text-muted-foreground">Valid until: </span>{formatDate(quotation.expiresAt)}</p>}
                 <p className="lg:col-span-2">
                   <span className="text-muted-foreground">Request details: </span>
                   {quotation.notes || contactDetails}
@@ -204,6 +205,8 @@ export default function QuotationsPage() {
                   Customer confirmed the order.
                 </div>
               )}
+
+              {quotation.status === "confirmed" && !quotation.orderId && <Button size="sm" variant="outline" onClick={() => void handleCancel(quotation)} className="self-start text-destructive hover:bg-destructive/10 hover:text-destructive">Cancel quotation</Button>}
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -230,6 +233,7 @@ export default function QuotationsPage() {
 
                 {!isDecided && (
                   <div className="ml-auto flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => void handleCancel(quotation)} className="text-destructive hover:bg-destructive/10 hover:text-destructive">Cancel quotation</Button>
                     <Button
                       size="sm"
                       variant="outline"

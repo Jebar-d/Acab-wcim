@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS materials (
   quantity DECIMAL(14,3) NOT NULL DEFAULT 0,
   minimum_stock DECIMAL(14,3) NOT NULL DEFAULT 0,
   status ENUM('Available','Limited','Unavailable') NOT NULL DEFAULT 'Available',
+  image_url VARCHAR(500) NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   INDEX idx_material_status (status)
@@ -139,12 +140,17 @@ CREATE TABLE IF NOT EXISTS quotations (
   confirmation_sent_at DATETIME NULL,
   customer_confirmed_at DATETIME NULL,
   order_id VARCHAR(64) NULL,
+  expires_at DATETIME NULL,
+  cancelled_at DATETIME NULL,
+  cancelled_by VARCHAR(64) NULL,
+  cancel_reason TEXT NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   FOREIGN KEY (inquiry_id) REFERENCES inquiries(id) ON DELETE SET NULL,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
   FOREIGN KEY (account_id) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_quotes_account_status (account_id, status)
+  INDEX idx_quotes_account_status (account_id, status),
+  INDEX idx_quotes_expiry (expires_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -170,6 +176,23 @@ CREATE TABLE IF NOT EXISTS orders (
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
   FOREIGN KEY (account_id) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_orders_account_status (account_id, status)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS order_edit_requests (
+  id VARCHAR(64) PRIMARY KEY,
+  order_id VARCHAR(64) NOT NULL,
+  account_id VARCHAR(64) NOT NULL,
+  requested_items JSON NOT NULL,
+  previous_items JSON NOT NULL,
+  previous_order_status VARCHAR(80) NOT NULL,
+  status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  requested_at DATETIME NOT NULL,
+  reviewed_at DATETIME NULL,
+  reviewed_by VARCHAR(64) NULL,
+  rejection_reason TEXT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (account_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_order_edit_status (status, requested_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -314,13 +337,19 @@ INSERT INTO categories (id, name, description, status, created_at, updated_at)
 VALUES
 ('cat-cement','Cement','Cement and binder products','active',NOW(),NOW()),
 ('cat-steel','Steel Bars','Reinforcement and structural steel','active',NOW(),NOW()),
-('cat-lumber','Lumber','Structural and finish timber','active',NOW(),NOW())
+('cat-lumber','Lumber','Structural and finish timber','active',NOW(),NOW()),
+('cat-blocks','Hollow Blocks','Concrete hollow block products','active',NOW(),NOW()),
+('cat-sand','Sand','Construction sand and aggregates','active',NOW(),NOW()),
+('cat-glass','Glass','Glass products for construction','active',NOW(),NOW())
 ON DUPLICATE KEY UPDATE name=VALUES(name), updated_at=NOW();
 
 INSERT INTO materials (id, sku, name, category, unit, quantity, minimum_stock, status, created_at, updated_at)
 VALUES
 ('mat-portland-cement','CEM-001','Portland Cement','Cement','Bag',120,30,'Available',NOW(),NOW()),
 ('mat-structural-steel','STL-001','Structural Steel Bars','Steel Bars','Piece',42,20,'Limited',NOW(),NOW()),
-('mat-lumber','LMB-001','Structural Lumber','Lumber','Piece',68,25,'Available',NOW(),NOW())
+('mat-lumber','LMB-001','Structural Lumber','Lumber','Piece',68,25,'Available',NOW(),NOW()),
+('mat-hollow-blocks','BLK-001','Hollow Blocks','Hollow Blocks','Piece',0,0,'Unavailable',NOW(),NOW()),
+('mat-sand','SND-001','Construction Sand','Sand','Cubic Meter',0,0,'Unavailable',NOW(),NOW()),
+('mat-glass','GLS-001','Construction Glass','Glass','Sheet',0,0,'Unavailable',NOW(),NOW())
 ON DUPLICATE KEY UPDATE quantity=VALUES(quantity), minimum_stock=VALUES(minimum_stock), updated_at=NOW();
 

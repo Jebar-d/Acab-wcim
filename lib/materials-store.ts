@@ -1,13 +1,16 @@
 "use client";
-import { createRecord, deleteRecord, makeId, updateRecord, useDbCollection, apiRequest } from "@/lib/db-client";
+import { deleteRecord, makeId, updateRecord, useDbCollection, apiRequest, refreshCollection } from "@/lib/db-client";
 export type MaterialStatus = "Available" | "Limited" | "Unavailable";
-export type Material = { id:string; sku:string; name:string; category:string; unit:string; quantity:number; minimumStock:number; status:MaterialStatus; createdAt:string };
+export type Material = { id:string; sku:string; name:string; category:string; unit:string; quantity:number; minimumStock:number; status:MaterialStatus; imageUrl?:string|null; createdAt:string };
 export function useMaterials(): Material[] { return useDbCollection<Material>("materials"); }
-export function addMaterial(input: Omit<Material,"id"|"createdAt"> & {id?:string}) {
-  const material: Material={...input,id:input.id??makeId("material"),createdAt:new Date().toISOString()};
-  void createRecord("materials",material); return material;
+export async function addMaterial(input: Omit<Material,"id"|"createdAt"> & {id?:string;imageData?:string}) {
+  const {imageData,...details}=input;
+  const material: Material={...details,id:input.id??makeId("material"),createdAt:new Date().toISOString()};
+  const saved=await apiRequest<Material>("create","materials",{record:{...material,imageData:imageData??""}});
+  await refreshCollection<Material>("materials");
+  return saved;
 }
-export function updateMaterial(id:string,patch:Partial<Material>){ void updateRecord("materials",id,patch); }
+export async function updateMaterial(id:string,patch:Partial<Material>,imageData=""){const {imageUrl:_imageUrl,...details}=patch;const saved=await apiRequest<Material>("update","materials",{id,patch:{...details,imageData}});await refreshCollection<Material>("materials");return saved;}
 export function deleteMaterial(id:string){ void deleteRecord("materials",id); }
 export async function adjustStock(id:string,delta:number){
   const materials=await apiRequest<Material[]>("list","materials");

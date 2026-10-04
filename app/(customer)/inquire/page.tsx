@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, ImageOff } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 
@@ -11,6 +12,9 @@ import { createQuotation } from "@/lib/quotations-store";
 import { useSession } from "@/lib/auth-store";
 import { ensureClientForAccount } from "@/lib/clients-store";
 import { addNotification } from "@/lib/notifications-store";
+import { useMaterials } from "@/lib/materials-store";
+import type { QuotationItem } from "@/lib/quotations-store";
+import { resolveApiAssetUrl } from "@/lib/db-client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function MaterialImage({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) return <img src={resolveApiAssetUrl(src)} alt={name} className="h-full w-full object-contain p-3" onError={() => setFailed(true)} />;
+  return <span className="flex flex-col items-center gap-2 text-white/40"><ImageOff className="size-7" aria-hidden="true" /><span className="text-xs">No Image Available</span></span>;
+}
+
 export default function InquirePage() {
   const session = useSession();
   const router = useRouter();
@@ -34,6 +44,22 @@ export default function InquirePage() {
   const [projectType, setProjectType] = useState("Residential");
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const inventory = useMaterials();
+  const [selectedItems, setSelectedItems] = useState<Record<string, number | "">>({});
+  const [materialSearch, setMaterialSearch] = useState("");
+
+  function toggleMaterial(materialId: string) {
+    setSelectedItems((current) => {
+      if (Object.hasOwn(current, materialId)) {
+        const next = { ...current };
+        delete next[materialId];
+        return next;
+      }
+      return { ...current, [materialId]: "" };
+    });
+  }
+
+  const selectedMaterials = inventory.filter((material) => Object.hasOwn(selectedItems, material.id));
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,17 +76,30 @@ export default function InquirePage() {
 
       const project = String(data.get("project") ?? "").trim();
       const location = String(data.get("location") ?? "").trim();
-      const materials = String(data.get("materials") ?? "").trim();
-      const quantity = String(data.get("quantity") ?? "").trim();
+      const invalidSelection = Object.entries(selectedItems).find(([materialId, value]) => {
+        const material = inventory.find((item) => item.id === materialId);
+        const requested = Number(value);
+        return !material || !Number.isFinite(requested) || requested <= 0 || material.status === "Unavailable" || requested > material.quantity;
+      });
+      if (invalidSelection) {
+        const material = inventory.find((item) => item.id === invalidSelection[0]);
+        toast.error(material && Number(invalidSelection[1]) > material.quantity ? `Only ${material.quantity} ${material.unit} are currently available.` : "Enter a quantity greater than zero for each selected material.");
+        return;
+      }
+      const items: QuotationItem[] = inventory.filter((material) => Number(selectedItems[material.id] ?? 0) > 0).map((material) => ({materialId: material.id, materialName: material.name, sku: material.sku, category: material.category, imageUrl: material.imageUrl, quantity: Number(selectedItems[material.id]), unit: material.unit}));
+      const materials = JSON.stringify(items);
       const timeline = String(data.get("timeline") ?? "").trim();
       const email = String(data.get("customerEmail") ?? session.email ?? "").trim();
       const phone = String(data.get("customerPhone") ?? "").trim();
       const notes = String(data.get("notes") ?? "").trim();
 
-      if (!project || !location || !materials || !quantity || !timeline) {
+      if (!project || !location || !items.length || !timeline) {
         toast.error("Please fill in all required quotation details before submitting.");
         return;
       }
+      const unavailable = items.find((item) => { const material=inventory.find((candidate)=>candidate.id===item.materialId); return !material || material.status === "Unavailable" || item.quantity > (material?.quantity ?? 0); });
+      if (unavailable) { toast.error(`Only ${inventory.find((m)=>m.id===unavailable.materialId)?.quantity ?? 0} ${unavailable.unit} currently available for ${unavailable.materialName}.`); return; }
+      const quantity = items.map((item) => `${item.quantity} ${item.unit}`).join(", ");
 
       const client = ensureClientForAccount({
         id: session.id,
@@ -93,6 +132,7 @@ export default function InquirePage() {
         quantity,
         timeline,
         notes,
+        items,
         status: "pending",
         checklistStatus: "Pending Review",
       });
@@ -123,8 +163,8 @@ export default function InquirePage() {
 
   if (saving) {
     return (
-      <main className="min-h-screen bg-[#0e0e0d] px-6 py-20 text-white">
-        <div className="mx-auto max-w-2xl">
+      <main className="min-h-screen bg-[#0e0e0d] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-[4vw]">
+        <div className="mx-auto w-full max-w-[1600px]">
           <Skeleton className="h-10 w-72 bg-white/10" />
           <Skeleton className="mt-8 h-64 w-full bg-white/10" />
         </div>
@@ -134,14 +174,14 @@ export default function InquirePage() {
 
   return (
     <main className="min-h-screen bg-[#0e0e0d] text-white">
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-2xl">
+      <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-[4vw] lg:py-20">
+        <div className="mx-auto w-full max-w-[1600px]">
           {/* Page heading */}
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
             Request a quotation
           </p>
 
-          <h1 className="mt-4 text-5xl font-semibold tracking-tight text-white">
+          <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
             Tell us what you&apos;re building.
           </h1>
 
@@ -161,7 +201,7 @@ export default function InquirePage() {
             <form
               noValidate
               onSubmit={submit}
-              className="mt-10 flex flex-col gap-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6"
+              className="mt-8 flex min-w-0 flex-col gap-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:mt-10 sm:gap-6 sm:p-6 lg:p-8"
             >
               {/* Project Type */}
               <div>
@@ -251,34 +291,52 @@ export default function InquirePage() {
                 />
               </div>
 
-              {/* Materials */}
               <div>
-                <Label htmlFor="materials" className="text-white">
-                  Materials needed
-                </Label>
+                <Label htmlFor="material-search" className="text-white">Choose materials from current inventory</Label>
+                <Input id="material-search" value={materialSearch} onChange={(event)=>setMaterialSearch(event.target.value)} className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30" placeholder="Search materials..." />
+                {inventory.length === 0 && <p className="mt-3 text-sm text-white/60">No inventory materials are available to select.</p>}
+                <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  {inventory.filter((m)=>`${m.name} ${m.category} ${m.sku}`.toLowerCase().includes(materialSearch.toLowerCase())).map((material)=>{
+                    const selected = Object.hasOwn(selectedItems, material.id);
+                    const availability = material.quantity <= 0 || material.status === "Unavailable" ? "UNAVAILABLE" : material.status === "Limited" || material.quantity <= material.minimumStock ? "LIMITED" : "AVAILABLE";
+                    const availabilityClass = availability === "AVAILABLE" ? "text-emerald-300" : availability === "LIMITED" ? "text-amber-200" : "text-red-300";
+                    const quantity = Number(selectedItems[material.id] ?? 0);
 
-                <Input
-                  id="materials"
-                  name="materials"
-                  required
-                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
-                  placeholder="Example: Cement, Rebar, Sand"
-                />
-              </div>
-
-              {/* Quantity */}
-              <div>
-                <Label htmlFor="quantity" className="text-white">
-                  Quantity
-                </Label>
-
-                <Input
-                  id="quantity"
-                  name="quantity"
-                  required
-                  className="mt-1.5 border-white/10 bg-white/10 text-white placeholder:text-white/30"
-                  placeholder="Example: 50 bags, 100 pieces"
-                />
+                    return <div key={material.id} className="flex min-w-0 flex-col gap-2">
+                      <button type="button" aria-pressed={selected} onClick={() => toggleMaterial(material.id)} className={`overflow-hidden rounded-2xl border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${selected ? "border-blue-400 bg-blue-500/10" : "border-white/10 bg-white/[0.04] hover:border-white/25 hover:bg-white/[0.07]"}`}>
+                        <span className="flex h-36 items-center justify-center border-b border-white/10 bg-white/[0.03]" aria-label={`Image for ${material.name}`}>
+                          <MaterialImage key={material.imageUrl ?? material.id} src={material.imageUrl} name={material.name} />
+                        </span>
+                        <span className="block p-4">
+                          <span className="flex items-start justify-between gap-3">
+                            <span className="min-w-0"><span className="block truncate font-medium text-white">{material.name}</span><span className="mt-1 block truncate text-xs text-white/60">{material.category} · {material.sku}</span></span>
+                            {selected && <Check className="size-5 shrink-0 text-blue-300" aria-label="Selected" />}
+                          </span>
+                          <span className="mt-3 block text-sm text-white/70">Available: {material.quantity} {material.unit}</span>
+                          <span className={`mt-2 block text-xs font-semibold ${availabilityClass}`}>{availability}</span>
+                        </span>
+                      </button>
+                      {selected && <div className="px-1">
+                        <label className="block text-xs font-medium text-white/70" htmlFor={`qty-${material.id}`}>Quantity ({material.unit})</label>
+                        <Input id={`qty-${material.id}`} type="number" min="0.001" max={material.quantity} step="any" value={selectedItems[material.id] ?? ""} onChange={(event)=>setSelectedItems((current)=>({...current,[material.id]:event.target.value === "" ? "" : Number(event.target.value)}))} className="mt-1 h-10 rounded-xl border-white/10 bg-white/10 text-white" />
+                        {quantity > material.quantity && <p className="mt-1 text-xs text-red-300">Requested quantity exceeds available stock.</p>}
+                        {selectedItems[material.id] === "" && <p className="mt-1 text-xs text-amber-200">Enter a quantity greater than zero.</p>}
+                        {quantity <= 0 && selectedItems[material.id] !== "" && <p className="mt-1 text-xs text-red-300">Enter a quantity greater than zero.</p>}
+                      </div>}
+                    </div>;
+                  })}
+                </div>
+                {selectedMaterials.length > 0 && <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <h2 className="font-semibold text-white">Quotation summary</h2>
+                  <div className="mt-3 space-y-3">
+                    {selectedMaterials.map((material) => <div key={material.id} className="flex items-center gap-3 rounded-xl border border-white/10 p-3">
+                      <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]"><MaterialImage src={material.imageUrl} name={material.name} /></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate font-medium text-white">{material.name}</span><span className="block text-xs text-white/60">{material.sku} · {selectedItems[material.id] || 0} {material.unit}</span></span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => toggleMaterial(material.id)}>Remove</Button>
+                    </div>)}
+                  </div>
+                  <p className="mt-4 text-sm text-white/70">Total items: {selectedMaterials.length} · Total units: {selectedMaterials.reduce((sum, material) => sum + (Number(selectedItems[material.id]) || 0), 0)}</p>
+                </div>}
               </div>
 
               {/* Timeline */}

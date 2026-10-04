@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import { Edit3, ImagePlus, Plus, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,14 +43,55 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { resolveApiAssetUrl } from "@/lib/db-client";
+import { toast } from "sonner";
 
 export type FieldConfig = {
   key: string;
   label: string;
-  type?: "text" | "number" | "date";
+  type?: "text" | "number" | "date" | "image";
   defaultValue?: string;
   placeholder?: string;
+  previewKey?: string;
 };
+
+function ImagePreview({ src }: { src: string }) {
+  const [failed, setFailed] = React.useState(false);
+  if (!failed) return <img src={src} alt="Material image preview" className="h-full w-full object-contain" onError={() => setFailed(true)} />;
+  return <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground"><ImagePlus className="size-6" />Image preview unavailable</div>;
+}
+
+function ImageField({ value, currentImageUrl, onChange, onReadingChange }: { value: string; currentImageUrl?: string; onChange: (value: string) => void; onReadingChange: (reading: boolean) => void }) {
+  const [readError, setReadError] = React.useState("");
+  const preview = value.startsWith("data:image/") ? value : value === "__REMOVE_IMAGE__" ? "" : currentImageUrl ? resolveApiAssetUrl(currentImageUrl) : "";
+
+  function selectFile(file?: File) {
+    setReadError("");
+    if (!file) return;
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const mimeByExtension: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+    const mime = file.type.toLowerCase() === "image/jpg" ? "image/jpeg" : ["image/jpeg", "image/png", "image/webp"].includes(file.type.toLowerCase()) ? file.type.toLowerCase() : mimeByExtension[extension ?? ""];
+    if (!mime) { setReadError("Choose a JPG, JPEG, PNG, or WEBP image."); return; }
+    if (file.size > 4 * 1024 * 1024) { setReadError("Image must be 4 MB or smaller."); return; }
+    const reader = new FileReader();
+    onReadingChange(true);
+    reader.onload = () => { onReadingChange(false); if (typeof reader.result === "string") onChange(reader.result); else setReadError("Could not preview this image."); };
+    reader.onerror = () => { onReadingChange(false); setReadError("Could not read this image file."); };
+    reader.readAsDataURL(file.slice(0, file.size, mime));
+  }
+
+  return <div className="flex flex-col gap-3">
+    <div className="flex h-40 items-center justify-center overflow-hidden rounded-xl border border-dashed bg-muted/30">
+      {preview ? <ImagePreview key={preview} src={preview} /> : <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground"><ImagePlus className="size-6" />{value === "__REMOVE_IMAGE__" ? "Image will be removed" : "No image selected"}</div>}
+    </div>
+    <div className="flex flex-wrap items-center gap-2">
+      <label className="inline-flex h-9 cursor-pointer items-center rounded-xl border px-3 text-sm font-medium hover:bg-muted">{preview ? "Change image" : "Choose image"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { selectFile(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
+      {value === "__REMOVE_IMAGE__" && currentImageUrl ? <Button type="button" size="sm" variant="ghost" onClick={() => onChange("")}>Keep current image</Button> : (preview || currentImageUrl) && <Button type="button" size="sm" variant="ghost" onClick={() => onChange(currentImageUrl && !value.startsWith("data:image/") ? "__REMOVE_IMAGE__" : "")}><X className="size-4" />Remove</Button>}
+      <span className="text-xs text-muted-foreground">JPG, PNG, WEBP · up to 4 MB</span>
+    </div>
+    {readError && <p className="text-xs text-destructive">{readError}</p>}
+  </div>;
+}
 
 export type ColumnConfig<T> = {
   key: string;
@@ -83,9 +124,9 @@ export function DataTablePage<T extends { id: string }>({
   data: T[];
   columns: ColumnConfig<T>[];
   fields: FieldConfig[];
-  onAdd: (values: Record<string, string>) => void;
+  onAdd: (values: Record<string, string>) => unknown;
   onDelete?: (id: string) => void;
-  onUpdate?: (id: string, values: Record<string, string>) => void;
+  onUpdate?: (id: string, values: Record<string, string>) => unknown;
   emptyLabel?: string;
   addLabel?: string;
   extra?: (row: T) => React.ReactNode;
@@ -98,12 +139,13 @@ export function DataTablePage<T extends { id: string }>({
   const [form, setForm] = React.useState<Record<string, string>>(emptyForm);
   const [editing, setEditing] = React.useState<T | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [readingImage, setReadingImage] = React.useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    onAdd(form);
-    setForm(emptyForm);
-    setOpen(false);
+    if (readingImage) { toast.error("Wait for the image preview to finish before saving."); return; }
+    try { await onAdd(form); setForm(emptyForm); setOpen(false); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not save this record."); }
   }
 
   function openEdit(row: T) {
@@ -111,14 +153,15 @@ export function DataTablePage<T extends { id: string }>({
       fields.map((field) => [field.key, String((row as Record<string, unknown>)[field.key] ?? "")]),
     );
     setForm(values);
+    setReadingImage(false);
     setEditing(row);
   }
 
-  function handleEdit(event: React.FormEvent) {
+  async function handleEdit(event: React.FormEvent) {
     event.preventDefault();
-    if (editing && onUpdate) onUpdate(editing.id, form);
-    setEditing(null);
-    setForm(emptyForm);
+    if (readingImage) { toast.error("Wait for the image preview to finish before saving."); return; }
+    try { if (editing && onUpdate) await onUpdate(editing.id, form); setEditing(null); setForm(emptyForm); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Could not update this record."); }
   }
 
   return (
@@ -152,27 +195,15 @@ export function DataTablePage<T extends { id: string }>({
               {fields.map((field) => (
                 <div key={field.key} className="flex flex-col gap-1.5">
                   <Label htmlFor={field.key}>{field.label}</Label>
-                  <Input
-                    id={field.key}
-                    type={field.type ?? "text"}
-                    required
-                    value={form[field.key] ?? ""}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        [field.key]: event.target.value,
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                  />
+                  {field.type === "image" ? <ImageField value={form[field.key] ?? ""} currentImageUrl={field.previewKey && editing ? String((editing as Record<string, unknown>)[field.previewKey] ?? "") : undefined} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onReadingChange={setReadingImage} /> : <Input id={field.key} type={field.type ?? "text"} required value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />}
                 </div>
               ))}
             </form>
 
             <SheetFooter className="flex-row justify-end gap-2">
               <SheetClose render={<Button variant="outline">Cancel</Button>} />
-              <Button type="submit" form="data-table-add-form">
-                {addLabel}
+              <Button type="submit" form="data-table-add-form" disabled={readingImage}>
+                {readingImage ? "Preparing image…" : addLabel}
               </Button>
             </SheetFooter>
           </SheetContent>
@@ -262,13 +293,13 @@ export function DataTablePage<T extends { id: string }>({
             {fields.map((field) => (
               <div key={field.key} className="flex flex-col gap-1.5">
                 <Label htmlFor={`edit-${field.key}`}>{field.label}</Label>
-                <Input id={`edit-${field.key}`} type={field.type ?? "text"} value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />
+                {field.type === "image" ? <ImageField value={form[field.key] ?? ""} currentImageUrl={field.previewKey ? String((editing as unknown as Record<string, unknown> | null)?.[field.previewKey] ?? "") : undefined} onChange={(value) => setForm((prev) => ({ ...prev, [field.key]: value }))} onReadingChange={setReadingImage} /> : <Input id={`edit-${field.key}`} type={field.type ?? "text"} value={form[field.key] ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))} placeholder={field.placeholder} />}
               </div>
             ))}
           </form>
           <SheetFooter className="flex-row justify-end gap-2">
             <SheetClose render={<Button variant="outline">Cancel</Button>} />
-            <Button type="submit" form="data-table-edit-form">Save changes</Button>
+            <Button type="submit" form="data-table-edit-form" disabled={readingImage}>{readingImage ? "Preparing image…" : "Save changes"}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

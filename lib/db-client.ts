@@ -33,6 +33,14 @@ const API_URLS = [
   Boolean(value) && list.indexOf(value) === index,
 );
 
+export function resolveApiAssetUrl(path?: string | null) {
+  if (!path) return "";
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  const apiUrl = API_URLS[0];
+  if (!apiUrl) return path;
+  try { return new URL(path.replace(/^\/+/, ""), new URL(".", apiUrl)).toString(); } catch { return path; }
+}
+
 type ApiResponse<T> = {
   ok: boolean;
   data?: T;
